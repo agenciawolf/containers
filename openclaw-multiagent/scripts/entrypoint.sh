@@ -139,6 +139,16 @@ init_directories() {
     chmod -R 777 "${WORKSPACE}/.cache"
     chmod -R 777 "${WORKSPACE}/logs"
     
+    # CRÍTICO: Symlink de /root/.ollama para /workspace/.ollama (persistência no RunPod)
+    # Ollama por padrão usa ~/.ollama que no container é /root/.ollama
+    if [[ -d /root/.ollama && ! -L /root/.ollama ]]; then
+        # Backup se existir conteúdo
+        mv /root/.ollama /root/.ollama.bak 2>/dev/null || true
+    fi
+    rm -rf /root/.ollama 2>/dev/null || true
+    ln -sf "${WORKSPACE}/.ollama" /root/.ollama
+    log_info "Symlink criado: /root/.ollama -> ${WORKSPACE}/.ollama"
+    
     # Symlinks de /home/<user> para /workspace/agents/<user> (OpenClaw compatibilidade)
     for agent in planner coder hacker; do
         local USER_HOME="/home/${agent}"
