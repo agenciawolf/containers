@@ -20,6 +20,7 @@ RUN mkdir -p /opt/nodejs && \
     ln -sf /opt/nodejs/bin/node /usr/local/bin/node && \
     ln -sf /opt/nodejs/bin/npm /usr/local/bin/npm && \
     npm install -g pnpm && \
+    ln -sf /opt/nodejs/bin/pnpm /usr/local/bin/pnpm && \
     pnpm config set store-dir /opt/pnpm-store
 
 # ============================================================================
