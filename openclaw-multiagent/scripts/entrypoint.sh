@@ -120,18 +120,18 @@ setup_ollama() {
         exit 1
     fi
     
-    # Verificar se modelo GLM 4.7 Flash existe, senão fazer pull
-    log_info "Verificando modelo glm4.7-flash..."
-    if ! ollama list | grep -q "glm4.7-flash"; then
-        log_info "Baixando modelo glm4.7-flash (isso pode levar alguns minutos)..."
-        ollama pull glm4.7-flash || {
-            log_warn "Modelo glm4.7-flash não encontrado no registry padrão"
+    # Verificar se modelo GLM 4 existe, senão fazer pull
+    log_info "Verificando modelo glm4..."
+    if ! ollama list | grep -q "glm4"; then
+        log_info "Baixando modelo glm4 (isso pode levar alguns minutos)..."
+        ollama pull glm4 || {
+            log_warn "Modelo glm4 não encontrado no registry padrão"
             log_info "Tentando alternativas..."
             # Tentar nome alternativo ou similar
-            ollama pull glm4:latest || ollama pull qwen2.5:14b
+            ollama pull qwen2.5:14b
         }
     else
-        log_info "Modelo glm4.7-flash já disponível"
+        log_info "Modelo glm4 já disponível"
     fi
     
     # Parar Ollama temporário
@@ -176,7 +176,7 @@ gateway:
 agents:
   defaults:
     model:
-      primary: "ollama/glm4.7-flash"
+      primary: "ollama/glm4"
       fallback: ["ollama/qwen2.5-coder:32b"]
     systemPrompt: |
       Você é o agente ${AGENT} de uma equipe multi-agente.
@@ -211,14 +211,14 @@ agents:
 models:
   defaults:
     provider: ollama
-    model: ollama/glm4.7-flash
+    model: ollama/glm4
   providers:
     ollama:
       apiKey: "ollama-local"
       baseUrl: "http://localhost:11434/v1"
       models:
-        - id: "glm4.7-flash"
-          name: "GLM 4.7 Flash"
+        - id: "glm4"
+          name: "GLM 4"
           reasoning: true
           input: ["text"]
           cost:
