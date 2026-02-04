@@ -55,7 +55,9 @@ RUN apt-get update --yes && apt-get upgrade --yes && \
     # Ferramentas de rede e segurança (para o agente hacker)
     nmap netcat-openbsd traceroute dnsutils whois masscan nikto \
     # Ferramentas de desenvolvimento
-    vim nano tmux htop iotools jq yq tree rsync \
+    vim nano tmux htop jq tree rsync \
+    # Locales
+    locales \
     # Ferramentas de sistema
     sudo cron supervisor logrotate inotify-tools \
     # SSH e acesso remoto
@@ -132,6 +134,7 @@ COPY scripts/health-check.sh /opt/scripts/
 COPY scripts/setup.sh /opt/scripts/
 COPY scripts/run-agent.sh /opt/scripts/
 COPY scripts/hardening.sh /opt/scripts/
+COPY scripts/entrypoint.sh /opt/scripts/
 COPY config/supervisord.conf /opt/config/
 COPY config/openclaw-template.yaml /opt/config/
 

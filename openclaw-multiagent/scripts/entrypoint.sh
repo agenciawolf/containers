@@ -104,14 +104,21 @@ setup_ollama() {
     local OLLAMA_PID=$!
     
     # Aguardar Ollama estar pronto
-    log_info "Aguardando Ollama iniciar..."
-    for i in {1..30}; do
+    log_info "Aguardando Ollama estar pronto..."
+    for i in {1..60}; do
         if curl -s "http://localhost:${OLLAMA_PORT}/api/tags" > /dev/null 2>&1; then
             log_info "Ollama está pronto!"
             break
         fi
+        log_info "Aguardando Ollama... (${i}/60)"
         sleep 1
     done
+    
+    # Verificar se está realmente pronto
+    if ! curl -s "http://localhost:${OLLAMA_PORT}/api/tags" > /dev/null 2>&1; then
+        log_error "Ollama não iniciou após 60 segundos"
+        exit 1
+    fi
     
     # Verificar se modelo GLM 4.7 Flash existe, senão fazer pull
     log_info "Verificando modelo glm4.7-flash..."
@@ -241,49 +248,19 @@ EOF
 
 # ============================================================================
 # FUNÇÃO: Criar script de execução dos agentes
+# NOTA: run-agent.sh agora está em /opt/scripts (copiado no build)
+# Esta função mantida para compatibilidade futura
 # ============================================================================
 create_agent_scripts() {
-    log_step "Criando scripts de execução dos agentes..."
+    log_step "Verificando scripts de execução..."
     
-    local SCRIPT_FILE="${WORKSPACE}/scripts/run-agent.sh"
-    
-    cat > "${SCRIPT_FILE}" << 'EOFSCRIPT'
-#!/bin/bash
-# Script para executar agente OpenClaw
-
-set -euo pipefail
-
-AGENT="${1:-}"
-PORT="${2:-}"
-
-if [ -z "$AGENT" ] || [ -z "$PORT" ]; then
-    echo "Uso: $0 <agente> <porta>"
-    exit 1
-fi
-
-export HOME="/workspace/agents/${AGENT}"
-export OPENCLAW_HOME="${HOME}/.openclaw"
-# PATH atualizado para /opt (Node e pnpm instalados fora do /workspace)
-export PATH="/opt/pnpm:/opt/nodejs/bin:${PATH}"
-
-# Aguardar Ollama estar pronto
-for i in {1..60}; do
-    if curl -s "http://localhost:11434/api/tags" > /dev/null 2>&1; then
-        break
+    # Verificar se run-agent.sh existe em /opt/scripts
+    if [ ! -f "/opt/scripts/run-agent.sh" ]; then
+        log_error "run-agent.sh não encontrado em /opt/scripts"
+        exit 1
     fi
-    echo "[${AGENT}] Aguardando Ollama..."
-    sleep 1
-done
-
-echo "[${AGENT}] Iniciando OpenClaw gateway na porta ${PORT}..."
-cd "${HOME}"
-
-# Iniciar gateway
-exec openclaw gateway --port "${PORT}" --config "${OPENCLAW_HOME}/config.yaml"
-EOFSCRIPT
     
-    chmod +x "${SCRIPT_FILE}"
-    log_info "Script de execução criado em ${SCRIPT_FILE}"
+    log_info "Scripts verificados em /opt/scripts"
 }
 
 # ============================================================================
@@ -325,6 +302,14 @@ full_setup() {
     
     check_gpu
     init_directories
+    
+    # Aplicar hardening de segurança
+    log_step "Aplicando hardening de segurança..."
+    if [ -f "/opt/scripts/hardening.sh" ]; then
+        bash /opt/scripts/hardening.sh
+        log_info "Hardening aplicado"
+    fi
+    
     setup_ollama
     setup_agents
     create_agent_scripts
