@@ -1,45 +1,117 @@
 #!/bin/bash
-# Script de inicialização principal para OpenClaw Multi-Agent no RunPod
-# Responsável por: setup inicial, health checks, e inicialização de serviços
+# Script de inicialização otimizado para OpenClaw Multi-Agent no RunPod
+# Inclui: retry exponencial, circuit breaker, health checks avançados
 
 set -euo pipefail
+
+# Configurações de retry
+MAX_RETRIES=5
+INITIAL_BACKOFF=1
+MAX_BACKOFF=30
+CIRCUIT_BREAKER_THRESHOLD=3
 
 # Cores para logs
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Configurações
 WORKSPACE="/workspace"
 LOGS_DIR="${WORKSPACE}/logs"
 AGENTS_DIR="${WORKSPACE}/agents"
 OLLAMA_PORT=11434
+CIRCUIT_BREAKER_FILE="${WORKSPACE}/.circuit-breaker"
 
-log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
+log_info() { echo -e "${GREEN}[$(date -Iseconds)] [INFO]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[$(date -Iseconds)] [WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[$(date -Iseconds)] [ERROR]${NC} $1"; }
+log_step() { echo -e "${BLUE}[$(date -Iseconds)] [STEP]${NC} $1"; }
 
-# ============================================================================
-# FUNÇÃO: Verificar GPU e CUDA
-# ============================================================================
+# Retry com backoff exponencial
+retry_with_backoff() {
+    local cmd="$1"
+    local retries=0
+    local backoff=$INITIAL_BACKOFF
+    
+    while [[ $retries -lt $MAX_RETRIES ]]; do
+        if eval "$cmd"; then
+            return 0
+        fi
+        
+        ((retries++))
+        log_warn "Comando falhou (tentativa $retries/$MAX_RETRIES). Aguardando ${backoff}s..."
+        sleep $backoff
+        
+        # Exponential backoff com jitter
+        backoff=$((backoff * 2))
+        [[ $backoff -gt $MAX_BACKOFF ]] && backoff=$MAX_BACKOFF
+        backoff=$((backoff + RANDOM % 5))
+    done
+    
+    return 1
+}
+
+# Circuit breaker pattern
+check_circuit_breaker() {
+    local service="$1"
+    local count_file="${CIRCUIT_BREAKER_FILE}.${service}"
+    
+    if [[ -f "$count_file" ]]; then
+        local count=$(cat "$count_file" 2>/dev/null || echo 0)
+        if [[ $count -ge $CIRCUIT_BREAKER_THRESHOLD ]]; then
+            log_error "Circuit breaker aberto para ${service} (${count} falhas)"
+            return 1
+        fi
+    fi
+    return 0
+}
+
+record_failure() {
+    local service="$1"
+    local count_file="${CIRCUIT_BREAKER_FILE}.${service}"
+    local count=$(cat "$count_file" 2>/dev/null || echo 0)
+    echo $((count + 1)) > "$count_file"
+}
+
+record_success() {
+    local service="$1"
+    local count_file="${CIRCUIT_BREAKER_FILE}.${service}"
+    rm -f "$count_file"
+}
+
+# Verificar GPU com timeout
 check_gpu() {
     log_step "Verificando GPU e CUDA..."
     
-    if ! command -v nvidia-smi &> /dev/null; then
-        log_error "nvidia-smi não encontrado. GPU pode não estar disponível."
-        exit 1
+    local gpu_ready=false
+    local attempts=0
+    local max_attempts=30
+    
+    while [[ $attempts -lt $max_attempts ]]; do
+        if command -v nvidia-smi &> /dev/null && nvidia-smi > /dev/null 2>&1; then
+            gpu_ready=true
+            break
+        fi
+        ((attempts++))
+        log_info "Aguardando GPU... ($attempts/$max_attempts)"
+        sleep 2
+    done
+    
+    if [[ "$gpu_ready" == "false" ]]; then
+        log_error "GPU não disponível após ${max_attempts} tentativas"
+        return 1
     fi
     
-    nvidia-smi
+    nvidia-smi --query-gpu=name,memory.total,memory.free,temperature.gpu --format=csv,noheader
     
-    if [ -z "${CUDA_VISIBLE_DEVICES:-}" ]; then
+    if [[ -z "${CUDA_VISIBLE_DEVICES:-}" ]]; then
         export CUDA_VISIBLE_DEVICES=0
     fi
     
     log_info "GPU detectada: CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}"
+    record_success "gpu"
 }
 
 # ============================================================================
