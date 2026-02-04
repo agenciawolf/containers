@@ -3,8 +3,9 @@ set -euo pipefail
 echo "[SETUP] OpenClaw Multi-Agent Infrastructure"
 echo "[SETUP] Workspace: /workspace"
 mkdir -p /workspace/{logs,config,scripts,cache,.ollama}
-mkdir -p /workspace/agents/{planner,coder,hacker}/workspace
-chown -R planner:planner /workspace/agents/planner
-chown -R coder:coder /workspace/agents/coder
-chown -R hacker:hacker /workspace/agents/hacker
-echo "[SETUP] Diretorios criados"
+mkdir -p /workspace/agents/{planner,coder,hacker}/{workspace,.openclaw}
+# Permissões 777 para NFS (chown não funciona em volumes NFS)
+chmod -R 777 /workspace/agents
+chmod -R 777 /workspace/.ollama
+chmod -R 777 /workspace/logs
+echo "[SETUP] Diretorios criados com permissões 777"

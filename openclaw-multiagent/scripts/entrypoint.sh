@@ -48,24 +48,45 @@ check_gpu() {
 init_directories() {
     log_step "Inicializando estrutura de diretórios..."
     
-    # Diretórios principais
-    mkdir -p "${WORKSPACE}"/{logs,config,scripts,cache,.ollama,.openclaw}
+    # Diretórios principais em /workspace (persistência NFS)
+    mkdir -p "${WORKSPACE}"/{logs,config,scripts,cache,.ollama}
     mkdir -p "${WORKSPACE}/.cache"/{pip,npm,yarn,pnpm-store,huggingface}
     
-    # Diretórios dos agentes - permissões 777 para NFS
+    # Diretórios dos agentes - dados persistentes
     for agent in planner coder hacker; do
-        mkdir -p "${AGENTS_DIR}/${agent}"/workspace
         mkdir -p "${AGENTS_DIR}/${agent}"/.openclaw
+        mkdir -p "${AGENTS_DIR}/${agent}"/workspace
+        # Diretório de sessões do OpenClaw (crítico para persistência de conversas)
+        mkdir -p "${AGENTS_DIR}/${agent}"/.openclaw/agents/${agent}/sessions
+        mkdir -p "${AGENTS_DIR}/${agent}"/.openclaw/memory
     done
     
-    # Permissões 777 para volumes NFS (runtime)
+    # Permissões 777 para volumes NFS (runtime) - necessário para funcionar no RunPod
     chmod -R 777 "${AGENTS_DIR}"
     chmod -R 777 "${WORKSPACE}/.ollama"
     chmod -R 777 "${WORKSPACE}/.cache"
     chmod -R 777 "${WORKSPACE}/logs"
-    chmod -R 777 "${WORKSPACE}/.openclaw" 2>/dev/null || true
     
-    log_info "Estrutura de diretórios criada com sucesso (permissões 777 para NFS)"
+    # Symlinks de /home/<user> para /workspace/agents/<user> (OpenClaw compatibilidade)
+    for agent in planner coder hacker; do
+        local USER_HOME="/home/${agent}"
+        local AGENT_DATA="${AGENTS_DIR}/${agent}"
+        
+        # Remover .openclaw existente em /home se houver
+        rm -rf "${USER_HOME}/.openclaw" 2>/dev/null || true
+        
+        # Criar symlink para dados persistentes
+        ln -sf "${AGENT_DATA}/.openclaw" "${USER_HOME}/.openclaw"
+        
+        # Criar symlink para workspace
+        rm -rf "${USER_HOME}/workspace" 2>/dev/null || true
+        ln -sf "${AGENT_DATA}/workspace" "${USER_HOME}/workspace"
+        
+        # Ajustar permissões do home
+        chmod 755 "${USER_HOME}"
+    done
+    
+    log_info "Estrutura de diretórios criada com sucesso (symlinks para persistência)"
 }
 
 # ============================================================================
@@ -135,6 +156,8 @@ setup_agents() {
         
         cat > "${CONFIG_FILE}" << EOF
 # Configuração OpenClaw para agente: ${AGENT}
+# Persistência em: ${AGENT_DIR}/.openclaw
+
 gateway:
   port: ${PORT}
   host: 0.0.0.0
@@ -142,6 +165,41 @@ gateway:
   trustedProxies: ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10"]
   auth:
     token: "${OPENCLAW_WEB_PASSWORD:-minhasenha123}"
+
+agents:
+  defaults:
+    model:
+      primary: "ollama/glm4.7-flash"
+      fallback: ["ollama/qwen2.5-coder:32b"]
+    systemPrompt: |
+      Você é o agente ${AGENT} de uma equipe multi-agente.
+      Seu papel: $(case ${AGENT} in
+        planner) echo "arquitetura de soluções, planejamento e design de sistemas" ;;
+        coder) echo "desenvolvimento de código, debugging e otimização" ;;
+        hacker) echo "segurança, testes de penetração e análise de vulnerabilidades" ;;
+      esac)
+      
+      Diretrizes:
+      - Sempre justifique suas decisões
+      - Considere segurança e performance
+      - Documente seu raciocínio
+      
+  ${AGENT}:
+    name: "${AGENT^}"
+    description: "Agente especializado em ${AGENT}"
+    
+    # Configuração de ferramentas
+    tools:
+      bash:
+        enabled: true
+      browser:
+        enabled: true
+      web:
+        enabled: true
+        search:
+          enabled: true
+      files:
+        enabled: true
 
 models:
   defaults:
@@ -163,32 +221,6 @@ models:
             cacheWrite: 0
           contextWindow: 32768
           maxTokens: 32768
-
-agents:
-  defaults:
-    model:
-      primary: "ollama/glm4.7-flash"
-    systemPrompt: |
-      Você é o agente ${AGENT} de uma equipe multi-agente.
-      Seu papel: $(case ${AGENT} in
-        planner) echo "arquitetura de soluções, planejamento e design de sistemas" ;;
-        coder) echo "desenvolvimento de código, debugging e otimização" ;;
-        hacker) echo "segurança, testes de penetração e análise de vulnerabilidades" ;;
-      esac)
-      
-      Diretrizes:
-      - Sempre justifique suas decisões
-      - Considere segurança e performance
-      - Documente seu raciocínio
-      
-  ${AGENT}:
-    name: "${AGENT^}"
-    description: "Agente especializado em ${AGENT}"
-    tools:
-      bash: true
-      browser: true
-      web: true
-      files: true
 
 logging:
   level: info

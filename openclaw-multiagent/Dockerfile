@@ -26,6 +26,8 @@ ENV OLLAMA_PORT=11434
 ENV OLLAMA_NUM_PARALLEL=3
 ENV OLLAMA_MAX_LOADED_MODELS=1
 ENV OLLAMA_FLASH_ATTENTION=1
+# Permitir acesso de qualquer origem (necessário para RunPod)
+ENV OLLAMA_ORIGINS="*"
 
 # OpenClaw configurações
 ENV OPENCLAW_HOME=/workspace/.openclaw
@@ -95,7 +97,8 @@ RUN npm install -g pnpm && \
 
 # ============================================================================
 # CRIAÇÃO DE USUÁRIOS ISOLADOS (3 AGENTES)
-# PERMISSÕES SERÃO AJUSTADAS NO RUNTIME (entrypoint.sh)
+# HOME em /home/<user> (estrutura padrão Linux, compatível com OpenClaw)
+# Dados persistentes em /workspace/agents/<user> (symlink no entrypoint)
 # ============================================================================
 # Agente Planner: planejamento e arquitetura
 RUN useradd -m -d /home/planner -s /bin/bash -u 1001 planner
@@ -146,12 +149,13 @@ pidfile=/var/run/supervisord.pid\n\
 [program:ollama]\n\
 command=/usr/local/bin/ollama serve\n\
 user=root\n\
-environment=HOME="/workspace",OLLAMA_HOST="%(ENV_OLLAMA_HOST)s",OLLAMA_PORT="%(ENV_OLLAMA_PORT)s",OLLAMA_MODELS="%(ENV_OLLAMA_MODELS)s",OLLAMA_NUM_PARALLEL="%(ENV_OLLAMA_NUM_PARALLEL)s",OLLAMA_MAX_LOADED_MODELS="%(ENV_OLLAMA_MAX_LOADED_MODELS)s",OLLAMA_FLASH_ATTENTION="%(ENV_OLLAMA_FLASH_ATTENTION)s",CUDA_VISIBLE_DEVICES="0"\n\
+environment=HOME="/workspace",OLLAMA_HOST="%(ENV_OLLAMA_HOST)s",OLLAMA_PORT="%(ENV_OLLAMA_PORT)s",OLLAMA_MODELS="%(ENV_OLLAMA_MODELS)s",OLLAMA_NUM_PARALLEL="%(ENV_OLLAMA_NUM_PARALLEL)s",OLLAMA_MAX_LOADED_MODELS="%(ENV_OLLAMA_MAX_LOADED_MODELS)s",OLLAMA_FLASH_ATTENTION="%(ENV_OLLAMA_FLASH_ATTENTION)s",OLLAMA_ORIGINS="%(ENV_OLLAMA_ORIGINS)s",CUDA_VISIBLE_DEVICES="0"\n\
 autostart=true\n\
 autorestart=true\n\
 stdout_logfile=/workspace/logs/ollama.log\n\
 stderr_logfile=/workspace/logs/ollama-error.log\n\
-\n\
+priority=10\n\
+startretries=10\n\
 [program:openclaw-planner]\n\
 command=/opt/scripts/run-agent.sh planner 18790\n\
 user=planner\n\
@@ -186,12 +190,9 @@ startsecs=5\n\
 programs=openclaw-planner,openclaw-coder,openclaw-hacker' > /etc/supervisor/conf.d/supervisord.conf
 
 # ============================================================================
-# PERMISSÕES FINAIS
+# PERMISSÕES FINAIS (ajustadas no runtime via entrypoint.sh)
 # ============================================================================
-RUN chown -R root:root /workspace/config && \
-    chmod 755 /workspace && \
-    chmod 755 /workspace/.ollama && \
-    chmod 755 /workspace/.cache
+RUN chmod 755 /workspace 2>/dev/null || true
 
 # ============================================================================
 # PORTAS EXPOSAS
