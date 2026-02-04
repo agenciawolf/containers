@@ -1,0 +1,43 @@
+gateway:
+  port: 18789
+  host: 0.0.0.0
+  auth:
+    token: auto-generate
+
+models:
+  defaults:
+    provider: ollama
+    model: ollama/glm4.7-flash
+  providers:
+    ollama:
+      apiKey: "ollama-local"
+      baseUrl: "http://localhost:11434/v1"
+      models:
+        - id: "glm4.7-flash"
+          name: "GLM 4.7 Flash"
+          reasoning: true
+          input: ["text"]
+          cost:
+            input: 0
+            output: 0
+          contextWindow: 32768
+          maxTokens: 32768
+
+agents:
+  defaults:
+    model:
+      primary: "ollama/glm4.7-flash"
+    tools:
+      bash: true
+      browser: true
+      web: true
+      files: true
+
+logging:
+  level: info
+  directory: "/workspace/logs"
+
+memory:
+  persistence:
+    enabled: true
+    directory: "/workspace/.openclaw/memory"
