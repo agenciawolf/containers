@@ -7,14 +7,14 @@ gateway:
 models:
   defaults:
     provider: ollama
-    model: ollama/glm4
+    model: ollama/glm-4.7-flash
   providers:
     ollama:
       apiKey: "ollama-local"
       baseUrl: "http://localhost:11434/v1"
       models:
-        - id: "glm4"
-          name: "GLM 4"
+        - id: "glm-4.7-flash"
+          name: "GLM-4.7-Flash"
           reasoning: true
           input: ["text"]
           cost:
@@ -26,7 +26,7 @@ models:
 agents:
   defaults:
     model:
-      primary: "ollama/glm4.7-flash"
+      primary: "ollama/glm-4.7-flash"
     tools:
       bash: true
       browser: true
