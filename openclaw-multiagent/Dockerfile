@@ -125,9 +125,10 @@ RUN mkdir -p /var/log/supervisor /var/run
 # SCRIPTS DE INICIALIZAÇÃO (copiados para /opt/scripts - fora do /workspace)
 # ============================================================================
 COPY scripts/init-ollama.sh /opt/scripts/
-COPY scripts/init-agents.sh /opt/scripts/
 COPY scripts/health-check.sh /opt/scripts/
 COPY scripts/setup.sh /opt/scripts/
+COPY scripts/run-agent.sh /opt/scripts/
+COPY scripts/hardening.sh /opt/scripts/
 COPY config/supervisord.conf /opt/config/
 COPY config/openclaw-template.yaml /opt/config/
 
