@@ -30,11 +30,11 @@ ENV OLLAMA_FLASH_ATTENTION=1
 # OpenClaw configurações
 ENV OPENCLAW_HOME=/workspace/.openclaw
 ENV OPENCLAW_WORKSPACE=/workspace/openclaw-workspace
-ENV PNPM_HOME=/workspace/.pnpm
-ENV NODE_PATH=/workspace/.nodejs/lib/node_modules
-ENV PATH="/workspace/.pnpm:/workspace/.nodejs/bin:/usr/local/cuda/bin:${PATH}"
+ENV PNPM_HOME=/opt/pnpm
+ENV NODE_PATH=/opt/nodejs/lib/node_modules
+ENV PATH="/opt/pnpm:/opt/nodejs/bin:/usr/local/cuda/bin:${PATH}"
 
-# Cache compartilhado
+# Cache compartilhado - diretórios serão criados no runtime
 ENV HF_HOME="/workspace/.cache/huggingface"
 ENV PIP_CACHE_DIR="/workspace/.cache/pip"
 ENV UV_CACHE_DIR="/workspace/.cache/uv"
@@ -80,37 +80,32 @@ RUN curl -fsSL https://ollama.com/install.sh | sh && \
     mkdir -p /workspace/.ollama/models
 
 # ============================================================================
-# INSTALAÇÃO DO NODE.JS 22 (PARA OPENCLAW)
+# INSTALAÇÃO DO NODE.JS 22 (FORA DO /WORKSPACE - EVITA CONFLITO COM VOLUME NFS)
 # ============================================================================
-RUN mkdir -p /workspace/.nodejs && \
+RUN mkdir -p /opt/nodejs && \
     curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}.0.0/node-v${NODE_VERSION}.0.0-linux-x64.tar.xz" | \
-    tar -xJf - -C /workspace/.nodejs --strip-components=1 && \
-    ln -sf /workspace/.nodejs/bin/node /usr/local/bin/node && \
-    ln -sf /workspace/.nodejs/bin/npm /usr/local/bin/npm
+    tar -xJf - -C /opt/nodejs --strip-components=1 && \
+    ln -sf /opt/nodejs/bin/node /usr/local/bin/node && \
+    ln -sf /opt/nodejs/bin/npm /usr/local/bin/npm
 
-# Instalar pnpm
+# Instalar pnpm em /opt (não em /workspace)
 RUN npm install -g pnpm && \
-    mkdir -p /workspace/.pnpm && \
-    pnpm config set store-dir /workspace/.cache/pnpm-store
+    mkdir -p /opt/pnpm && \
+    pnpm config set store-dir /opt/pnpm-store
 
 # ============================================================================
 # CRIAÇÃO DE USUÁRIOS ISOLADOS (3 AGENTES)
+# PERMISSÕES SERÃO AJUSTADAS NO RUNTIME (entrypoint.sh)
 # ============================================================================
 # Agente Planner: planejamento e arquitetura
-RUN useradd -m -d /workspace/agents/planner -s /bin/bash -u 1001 planner && \
-    mkdir -p /workspace/agents/planner/.openclaw /workspace/agents/planner/workspace && \
-    chown -R planner:planner /workspace/agents/planner
+RUN useradd -m -d /home/planner -s /bin/bash -u 1001 planner
 
 # Agente Coder: desenvolvimento de código
-RUN useradd -m -d /workspace/agents/coder -s /bin/bash -u 1002 coder && \
-    mkdir -p /workspace/agents/coder/.openclaw /workspace/agents/coder/workspace && \
-    chown -R coder:coder /workspace/agents/coder
+RUN useradd -m -d /home/coder -s /bin/bash -u 1002 coder
 
 # Agente Hacker: segurança e testes (acesso total às ferramentas)
-RUN useradd -m -d /workspace/agents/hacker -s /bin/bash -u 1003 hacker && \
-    usermod -aG sudo hacker && \
-    mkdir -p /workspace/agents/hacker/.openclaw /workspace/agents/hacker/workspace && \
-    chown -R hacker:hacker /workspace/agents/hacker
+RUN useradd -m -d /home/hacker -s /bin/bash -u 1003 hacker && \
+    usermod -aG sudo hacker
 
 # Permissões para acesso às ferramentas do sistema (especialmente para hacker)
 RUN echo "hacker ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/hacker && \
@@ -124,20 +119,19 @@ RUN npm install -g openclaw@latest
 # ============================================================================
 # DIRETÓRIOS DE LOGS E SUPERVISOR
 # ============================================================================
-RUN mkdir -p /workspace/logs /workspace/config /workspace/scripts && \
-    mkdir -p /var/log/supervisor /var/run
+RUN mkdir -p /var/log/supervisor /var/run
 
 # ============================================================================
-# SCRIPTS DE INICIALIZAÇÃO
+# SCRIPTS DE INICIALIZAÇÃO (copiados para /opt/scripts - fora do /workspace)
 # ============================================================================
-COPY scripts/init-ollama.sh /workspace/scripts/
-COPY scripts/init-agents.sh /workspace/scripts/
-COPY scripts/health-check.sh /workspace/scripts/
-COPY scripts/setup.sh /workspace/scripts/
-COPY config/supervisord.conf /workspace/config/
-COPY config/openclaw-template.yaml /workspace/config/
+COPY scripts/init-ollama.sh /opt/scripts/
+COPY scripts/init-agents.sh /opt/scripts/
+COPY scripts/health-check.sh /opt/scripts/
+COPY scripts/setup.sh /opt/scripts/
+COPY config/supervisord.conf /opt/config/
+COPY config/openclaw-template.yaml /opt/config/
 
-RUN chmod +x /workspace/scripts/*.sh
+RUN chmod +x /opt/scripts/*.sh
 
 # ============================================================================
 # CONFIGURAÇÃO DO SUPERVISOR (GERENCIAMENTO DE PROCESSOS)
@@ -158,28 +152,34 @@ stdout_logfile=/workspace/logs/ollama.log\n\
 stderr_logfile=/workspace/logs/ollama-error.log\n\
 \n\
 [program:openclaw-planner]\n\
-command=/workspace/scripts/run-agent.sh planner 18790\n\
+command=/opt/scripts/run-agent.sh planner 18790\n\
 user=planner\n\
 autostart=true\n\
 autorestart=true\n\
 stdout_logfile=/workspace/logs/planner.log\n\
 stderr_logfile=/workspace/logs/planner-error.log\n\
+priority=20\n\
+startsecs=5\n\
 \n\
 [program:openclaw-coder]\n\
-command=/workspace/scripts/run-agent.sh coder 18791\n\
+command=/opt/scripts/run-agent.sh coder 18791\n\
 user=coder\n\
 autostart=true\n\
 autorestart=true\n\
 stdout_logfile=/workspace/logs/coder.log\n\
 stderr_logfile=/workspace/logs/coder-error.log\n\
+priority=20\n\
+startsecs=5\n\
 \n\
 [program:openclaw-hacker]\n\
-command=/workspace/scripts/run-agent.sh hacker 18792\n\
+command=/opt/scripts/run-agent.sh hacker 18792\n\
 user=hacker\n\
 autostart=true\n\
 autorestart=true\n\
 stdout_logfile=/workspace/logs/hacker.log\n\
 stderr_logfile=/workspace/logs/hacker-error.log\n\
+priority=20\n\
+startsecs=5\n\
 \n\
 [group:openclaw]\n\
 programs=openclaw-planner,openclaw-coder,openclaw-hacker' > /etc/supervisor/conf.d/supervisord.conf

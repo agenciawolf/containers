@@ -52,17 +52,20 @@ init_directories() {
     mkdir -p "${WORKSPACE}"/{logs,config,scripts,cache,.ollama,.openclaw}
     mkdir -p "${WORKSPACE}/.cache"/{pip,npm,yarn,pnpm-store,huggingface}
     
-    # Diretórios dos agentes
+    # Diretórios dos agentes - permissões 777 para NFS
     for agent in planner coder hacker; do
-        mkdir -p "${AGENTS_DIR}/${agent}"/{workspace,.openclaw}
-        chown -R "${agent}:${agent}" "${AGENTS_DIR}/${agent}"
+        mkdir -p "${AGENTS_DIR}/${agent}"/workspace
+        mkdir -p "${AGENTS_DIR}/${agent}"/.openclaw
     done
     
-    # Permissões
-    chmod -R 755 "${WORKSPACE}/.ollama"
-    chmod -R 755 "${WORKSPACE}/.cache"
+    # Permissões 777 para volumes NFS (runtime)
+    chmod -R 777 "${AGENTS_DIR}"
+    chmod -R 777 "${WORKSPACE}/.ollama"
+    chmod -R 777 "${WORKSPACE}/.cache"
+    chmod -R 777 "${WORKSPACE}/logs"
+    chmod -R 777 "${WORKSPACE}/.openclaw" 2>/dev/null || true
     
-    log_info "Estrutura de diretórios criada com sucesso"
+    log_info "Estrutura de diretórios criada com sucesso (permissões 777 para NFS)"
 }
 
 # ============================================================================
@@ -135,8 +138,10 @@ setup_agents() {
 gateway:
   port: ${PORT}
   host: 0.0.0.0
+  # Trusted proxies para RunPod (evita erro de pairing)
+  trustedProxies: ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10"]
   auth:
-    token: "${AGENT}-token-$(date +%s)"
+    token: "${OPENCLAW_WEB_PASSWORD:-minhasenha123}"
 
 models:
   defaults:
@@ -195,8 +200,8 @@ memory:
     directory: "${AGENT_DIR}/.openclaw/memory"
 EOF
         
-        # Ajustar permissões
-        chown -R "${AGENT}:${AGENT}" "${AGENT_DIR}"
+        # Ajustar permissões 777 para NFS (sem chown)
+        chmod -R 777 "${AGENT_DIR}"
         
         log_info "Configuração criada para ${AGENT} em ${CONFIG_FILE}"
     done
@@ -226,7 +231,8 @@ fi
 
 export HOME="/workspace/agents/${AGENT}"
 export OPENCLAW_HOME="${HOME}/.openclaw"
-export PATH="/workspace/.pnpm:/workspace/.nodejs/bin:${PATH}"
+# PATH atualizado para /opt (Node e pnpm instalados fora do /workspace)
+export PATH="/opt/pnpm:/opt/nodejs/bin:${PATH}"
 
 # Aguardar Ollama estar pronto
 for i in {1..60}; do
