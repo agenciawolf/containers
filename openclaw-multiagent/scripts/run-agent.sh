@@ -16,7 +16,7 @@ export HOME="/home/${AGENT}"
 
 # Dados persistentes em /workspace via symlink
 export OPENCLAW_HOME="${HOME}/.openclaw"
-export PATH="/opt/pnpm:/opt/nodejs/bin:${PATH}"
+export PATH="/opt/nodejs/bin:${PATH}"
 
 # Configuração de log
 LOG_FILE="/workspace/logs/${AGENT}.log"
