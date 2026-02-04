@@ -234,22 +234,40 @@ setup_agents() {
         mkdir -p "${AGENT_DIR}/.openclaw"
         
         cat > "${CONFIG_FILE}" << EOF
-# Configuração OpenClaw para agente: ${AGENT}
+# Configuração OpenClaw otimizada para agente: ${AGENT}
 # Persistência em: ${AGENT_DIR}/.openclaw
 
 gateway:
   port: ${PORT}
   host: 0.0.0.0
   # Trusted proxies para RunPod (evita erro de pairing)
-  trustedProxies: ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10"]
+  trustedProxies: ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]
   auth:
     token: "${OPENCLAW_WEB_PASSWORD:-minhasenha123}"
+  # Timeouts e resiliência
+  timeouts:
+    request: 300s
+    connect: 10s
+    read: 300s
+  # Rate limiting
+  rateLimit:
+    enabled: true
+    requestsPerMinute: 60
+    burstSize: 10
+  # Health check
+  health:
+    enabled: true
+    path: /health
 
 agents:
   defaults:
     model:
       primary: "ollama/glm-4.7-flash"
-      fallback: ["ollama/qwen2.5-coder:32b"]
+      fallback: ["ollama/qwen2.5-coder:14b", "ollama/mistral:7b"]
+    # Timeouts de execução
+    execution:
+      timeout: 600s
+      maxIterations: 50
     systemPrompt: |
       Você é o agente ${AGENT} de uma equipe multi-agente.
       Seu papel: $(case ${AGENT} in
@@ -267,18 +285,29 @@ agents:
     name: "${AGENT^}"
     description: "Agente especializado em ${AGENT}"
     
-    # Configuração de ferramentas
+    # Configuração de ferramentas com timeouts
     tools:
       bash:
         enabled: true
+        timeout: 60s
       browser:
         enabled: true
+        timeout: 120s
       web:
         enabled: true
         search:
           enabled: true
+          timeout: 30s
       files:
         enabled: true
+        maxFileSize: 100MB
+    
+    # Circuit breaker
+    circuitBreaker:
+      enabled: true
+      failureThreshold: 5
+      successThreshold: 3
+      timeout: 60s
 
 models:
   defaults:
@@ -288,6 +317,15 @@ models:
     ollama:
       apiKey: "ollama-local"
       baseUrl: "http://localhost:11434/v1"
+      # Timeouts específicos do provider
+      timeout: 300s
+      # Retry configuration
+      retry:
+        enabled: true
+        maxRetries: 3
+        backoff: exponential
+        initialDelay: 1s
+        maxDelay: 30s
       models:
         - id: "glm-4.7-flash"
           name: "GLM-4.7-Flash"
@@ -304,11 +342,32 @@ models:
 logging:
   level: info
   file: "${WORKSPACE}/logs/${AGENT}-openclaw.log"
+  # Structured logging
+  format: json
+  # Rotação de logs
+  rotation:
+    maxSize: 50MB
+    maxBackups: 5
+    maxAge: 7
 
 memory:
   persistence:
     enabled: true
     directory: "${AGENT_DIR}/.openclaw/memory"
+  # Limites de memória
+  limits:
+    maxConversations: 100
+    maxMessagesPerConversation: 1000
+    retentionDays: 30
+
+# Observabilidade
+observability:
+  metrics:
+    enabled: true
+    path: /metrics
+  tracing:
+    enabled: true
+    sampleRate: 0.1
 EOF
         
         # Ajustar permissões 777 para NFS (sem chown)
