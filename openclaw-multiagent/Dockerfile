@@ -107,8 +107,8 @@ RUN echo "hacker ALL=(ALL) NOPASSWD: /usr/bin/nmap, /usr/bin/nikto, /usr/bin/mas
 # Security: remover capabilities desnecessárias
 RUN apt-get remove -y --purge linux-libc-dev 2>/dev/null || true
 
-# OpenClaw com version pinning para reproducibilidade
-RUN npm install -g openclaw@0.1.5 && \
+# OpenClaw - instalar versão mais recente
+RUN npm install -g openclaw && \
     npm cache clean --force
 
 # Diretórios criados no runtime para evitar problemas com volumes NFS
