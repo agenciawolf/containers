@@ -49,7 +49,7 @@ ENV YARN_CACHE_FOLDER="/workspace/.cache/yarn"
 RUN apt-get update --yes && apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
     # Build essentials
-    build-essential ca-certificates cmake curl git wget unzip zip \
+    build-essential ca-certificates cmake curl git wget unzip zip zstd \
     # Python e ferramentas
     python3.10 python3.10-dev python3.10-venv python3-pip \
     # Ferramentas de rede e segurança (para o agente hacker)
