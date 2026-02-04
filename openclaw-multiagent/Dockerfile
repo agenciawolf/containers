@@ -18,10 +18,7 @@ RUN mkdir -p /opt/nodejs && \
     curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}.0.0/node-v${NODE_VERSION}.0.0-linux-x64.tar.xz" | \
     tar -xJf - -C /opt/nodejs --strip-components=1 && \
     ln -sf /opt/nodejs/bin/node /usr/local/bin/node && \
-    ln -sf /opt/nodejs/bin/npm /usr/local/bin/npm && \
-    npm install -g pnpm && \
-    ln -sf /opt/nodejs/bin/pnpm /usr/local/bin/pnpm && \
-    pnpm config set store-dir /opt/pnpm-store
+    ln -sf /opt/nodejs/bin/npm /usr/local/bin/npm
 
 # ============================================================================
 # STAGE 2: Runtime (imagem final enxuta)
@@ -51,9 +48,8 @@ ENV RP_WORKSPACE=/workspace \
     OLLAMA_DEBUG=false \
     OPENCLAW_HOME=/workspace/.openclaw \
     OPENCLAW_WORKSPACE=/workspace/openclaw-workspace \
-    PNPM_HOME=/opt/pnpm \
     NODE_PATH=/opt/nodejs/lib/node_modules \
-    PATH="/opt/pnpm:/opt/nodejs/bin:/usr/local/cuda/bin:${PATH}" \
+    PATH="/opt/nodejs/bin:/usr/local/cuda/bin:${PATH}" \
     HF_HOME="/workspace/.cache/huggingface" \
     PIP_CACHE_DIR="/workspace/.cache/pip" \
     UV_CACHE_DIR="/workspace/.cache/uv" \
@@ -94,8 +90,6 @@ RUN curl -fsSL https://ollama.com/install.sh | sh && \
 
 # Copiar Node.js do stage builder
 COPY --from=builder /opt/nodejs /opt/nodejs
-COPY --from=builder /opt/pnpm /opt/pnpm
-COPY --from=builder /opt/pnpm-store /opt/pnpm-store
 RUN ln -sf /opt/nodejs/bin/node /usr/local/bin/node && \
     ln -sf /opt/nodejs/bin/npm /usr/local/bin/npm && \
     ln -sf /opt/nodejs/bin/npx /usr/local/bin/npx
