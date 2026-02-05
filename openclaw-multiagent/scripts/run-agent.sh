@@ -23,7 +23,10 @@ export OPENCLAW_CONFIG_PATH="${AGENT_DATA_DIR}/.openclaw/openclaw.json"
 export OPENCLAW_STATE_DIR="${AGENT_DATA_DIR}/.openclaw"
 
 # OpenClaw Gateway auth via env vars (conforme documentação)
-export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-openclaw-${AGENT}-token}"
+# OpenClaw Gateway auth via env vars (conforme documentação)
+# NOTA: Token é lido do arquivo de configuração (JSON).
+# NÃO exportar default aqui para não sobrescrever o token seguro gerado no entrypoint.
+# export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-openclaw-${AGENT}-token}"
 
 # SEGURANÇA: Exigir senha configurada, não usar fallback inseguro
 if [[ -z "${OPENCLAW_WEB_PASSWORD:-}" ]]; then

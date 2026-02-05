@@ -371,6 +371,22 @@ setup_agents() {
         # =======================================================================
         if [[ -f "${CONFIG_FILE}" ]]; then
             log_info "✅ Config existente preservada: ${CONFIG_FILE}"
+            
+            # ATUALIZAÇÃO DINÂMICA DE MODELO
+            # Se OPENCLAW_MODEL mudou, atualiza no JSON existente mantendo o resto (token, memórias) intacto
+            if [[ -n "${MODEL}" ]]; then
+                local current_model=$(jq -r '.llm.model // empty' "${CONFIG_FILE}" 2>/dev/null || echo "")
+                
+                if [[ "$current_model" != "$MODEL" ]]; then
+                    log_info "🔄 Atualizando modelo de '${current_model}' para '${MODEL}'..."
+                    if jq --arg m "$MODEL" '.llm.model = $m' "${CONFIG_FILE}" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"; then
+                        log_info "✅ Modelo atualizado com sucesso no JSON"
+                    else
+                        log_error "Falha ao atualizar modelo no JSON"
+                    fi
+                fi
+            fi
+            
             continue
         fi
         
