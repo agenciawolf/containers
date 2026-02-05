@@ -24,7 +24,14 @@ export OPENCLAW_STATE_DIR="${AGENT_DATA_DIR}/.openclaw"
 
 # OpenClaw Gateway auth via env vars (conforme documentação)
 export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-openclaw-${AGENT}-token}"
-export OPENCLAW_GATEWAY_PASSWORD="${OPENCLAW_WEB_PASSWORD:-minhasenha123}"
+
+# SEGURANÇA: Exigir senha configurada, não usar fallback inseguro
+if [[ -z "${OPENCLAW_WEB_PASSWORD:-}" ]]; then
+    echo "[ERROR] OPENCLAW_WEB_PASSWORD não configurada!" >&2
+    echo "[INFO] Configure a variável de ambiente no deploy RunPod" >&2
+    exit 1
+fi
+export OPENCLAW_GATEWAY_PASSWORD="${OPENCLAW_WEB_PASSWORD}"
 
 # Dados persistentes em /workspace via symlink
 export OPENCLAW_HOME="${AGENT_DATA_DIR}/.openclaw"

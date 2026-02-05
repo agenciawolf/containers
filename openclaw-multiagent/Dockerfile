@@ -127,9 +127,9 @@ COPY --chmod=755 scripts/*.sh /opt/scripts/
 COPY config/*.yaml /opt/config/
 COPY config/supervisord.conf /etc/supervisor/conf.d/
 
-# Health check nativo do Docker
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:11434/api/tags > /dev/null 2>&1 || exit 1
+# Health check nativo do Docker - verifica Ollama + agentes
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=3 \
+    CMD /opt/scripts/health-check.sh
 
 # Portas expostas
 EXPOSE 11434 18790 18791 18792 22

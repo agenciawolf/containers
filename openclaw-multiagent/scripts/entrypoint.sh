@@ -24,10 +24,20 @@ AGENTS_DIR="${WORKSPACE}/agents"
 OLLAMA_PORT=11434
 CIRCUIT_BREAKER_FILE="${WORKSPACE}/.circuit-breaker"
 
-log_info() { echo -e "${GREEN}[$(date -Iseconds)] [INFO]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[$(date -Iseconds)] [WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[$(date -Iseconds)] [ERROR]${NC} $1"; }
-log_step() { echo -e "${BLUE}[$(date -Iseconds)] [STEP]${NC} $1"; }
+# Mascarar dados sensíveis (tokens, senhas)
+mask_sensitive() {
+    local msg="$1"
+    # Mascarar tokens OpenClaw
+    msg=$(echo "$msg" | sed 's/openclaw-[a-zA-Z0-9-]\{10,\}/openclaw-***MASKED***/g')
+    # Mascarar senhas genéricas
+    msg=$(echo "$msg" | sed 's/password[=:][^ "]*/password=***MASKED***/gi')
+    echo "$msg"
+}
+
+log_info() { echo -e "${GREEN}[$(date -Iseconds)] [INFO]${NC} $(mask_sensitive "$1")"; }
+log_warn() { echo -e "${YELLOW}[$(date -Iseconds)] [WARN]${NC} $(mask_sensitive "$1")"; }
+log_error() { echo -e "${RED}[$(date -Iseconds)] [ERROR]${NC} $(mask_sensitive "$1")"; }
+log_step() { echo -e "${BLUE}[$(date -Iseconds)] [STEP]${NC} $(mask_sensitive "$1")"; }
 
 # Retry com backoff exponencial
 retry_with_backoff() {
@@ -125,6 +135,10 @@ init_directories() {
     mkdir -p "${WORKSPACE}"/{logs,config,scripts}
     mkdir -p "${WORKSPACE}/.ollama/models"  # Modelos Ollama persistentes
     mkdir -p "${WORKSPACE}/.cache"/{pip,npm,yarn,pnpm-store,huggingface,cuda}
+    mkdir -p "${WORKSPACE}/.supervisor"      # Socket supervisord
+    
+    # Limpar circuit breaker de execuções anteriores (evita bloqueio persistente)
+    rm -f "${WORKSPACE}/.circuit-breaker."* 2>/dev/null || true
     
     # Diretórios dos agentes - dados persistentes
     for agent in planner coder hacker; do
@@ -190,8 +204,8 @@ optimize_gpu() {
     # Habilitar persistence mode (reduz latência de cold start)
     nvidia-smi -pm ENABLED 2>/dev/null || log_warn "Persistence mode não disponível"
     
-    # Configurar compute mode para exclusive (aproveita toda GPU)
-    nvidia-smi -c EXCLUSIVE_PROCESS 2>/dev/null || true
+    # NOTA: NÃO usar EXCLUSIVE_PROCESS - pode bloquear Ollama de acessar GPU
+    # nvidia-smi -c DEFAULT mantém modo padrão que permite múltiplos processos
     
     log_info "GPU otimizada"
 }
@@ -524,6 +538,15 @@ main() {
     # Executar comando passado ou iniciar supervisord
     if [ $# -eq 0 ]; then
         log_step "Iniciando supervisord..."
+        
+        # Iniciar warmup em background após supervisord subir (30s delay)
+        (
+            sleep 30
+            if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+                warmup_model
+            fi
+        ) &
+        
         exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
     else
         exec "$@"
