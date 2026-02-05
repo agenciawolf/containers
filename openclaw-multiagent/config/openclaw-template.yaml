@@ -1,8 +1,14 @@
+identity:
+  name: "OpenClaw Multi-Agent"
+  theme: "sistema multi-agente para desenvolvimento colaborativo"
+  emoji: "🤖"
+
 gateway:
   port: 18789
   host: 0.0.0.0
   auth:
     token: auto-generate
+  trustedProxies: ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10"]
   # Timeouts e resiliência
   timeouts:
     request: 300s
@@ -48,9 +54,13 @@ models:
 
 agents:
   defaults:
+    workspace: ".openclaw/workspace"
     model:
       primary: "ollama/glm-4.7-flash"
       fallback: ["ollama/qwen2.5-coder:14b"]
+    heartbeat:
+      every: "30m"
+      target: "last"
     # Timeouts de execução
     execution:
       timeout: 600s
@@ -76,10 +86,35 @@ agents:
       failureThreshold: 5
       successThreshold: 3
       timeout: 60s
+  list:
+    - id: planner
+      identity:
+        name: "Planner"
+        theme: "planejamento e arquitetura de sistemas"
+        emoji: "🗺️"
+      sandbox:
+        mode: "off"
+    - id: coder
+      identity:
+        name: "Coder"
+        theme: "desenvolvimento e implementação de código"
+        emoji: "💻"
+      sandbox:
+        mode: "all"
+    - id: hacker
+      identity:
+        name: "Hacker"
+        theme: "segurança, testes e hardening"
+        emoji: "🔒"
+      sandbox:
+        mode: "off"
+      tools:
+        elevated: true
 
 logging:
   level: info
   directory: "/workspace/logs"
+  redactSensitive: "tools"
   # Structured logging
   format: json
   # Rotação de logs
@@ -106,3 +141,12 @@ observability:
   tracing:
     enabled: true
     sampleRate: 0.1
+
+# Segurança adicional
+security:
+  audit:
+    enabled: true
+    logPath: "/workspace/logs/audit.log"
+  sandbox:
+    image: "node:18-slim"  # Imagem base para sandbox
+    setupCommand: "npm install -g @openclaw/sandbox-setup"
