@@ -14,6 +14,10 @@ MAX_CPU="${AGENT_MAX_CPU:-4}"
 # HOME padrão Linux (/home/<user>) - OpenClaw espera essa estrutura
 export HOME="/home/${AGENT}"
 
+# OpenClaw Gateway auth via env vars (conforme documentação)
+export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-openclaw-${AGENT}-token}"
+export OPENCLAW_GATEWAY_PASSWORD="${OPENCLAW_WEB_PASSWORD:-minhasenha123}"
+
 # Dados persistentes em /workspace via symlink
 export OPENCLAW_HOME="${HOME}/.openclaw"
 export PATH="/opt/nodejs/bin:${PATH}"
@@ -61,4 +65,4 @@ wait_for_ollama() {
 wait_for_ollama || exit 1
 
 # Iniciar agente - supervisord gerencia logs automaticamente
-exec openclaw gateway --port "${PORT}" --allow-unconfigured --bind loopback --token "openclaw-${AGENT}-token"
+exec openclaw gateway --port "${PORT}" --allow-unconfigured --bind loopback
