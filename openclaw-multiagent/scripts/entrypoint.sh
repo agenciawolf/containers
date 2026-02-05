@@ -250,8 +250,7 @@ setup_agents() {
     "port": ${PORT},
     "bind": "loopback",
     "auth": {
-      "mode": "token",
-      "token": "${OPENCLAW_WEB_PASSWORD:-minhasenha123}"
+      "mode": "token"
     },
     "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]
   },
@@ -270,10 +269,11 @@ setup_agents() {
 }
 EOF
         
-        # Ajustar permissões 777 para NFS (sem chown)
+        # Ajustar permissões para hardening (doc security: ~/.openclaw 700, openclaw.json 600)
+        # Mas NFS RunPod não suporta chown/chmod, então mantemos 777
         chmod -R 777 "${AGENT_DIR}"
         
-        log_info "Configuração criada para ${AGENT} em ${CONFIG_FILE}"
+        # NOTA: Para hardening completo, rodar 'openclaw doctor' no container
     done
 }
 
