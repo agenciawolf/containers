@@ -364,36 +364,26 @@ setup_agents() {
         fi
         
         # =======================================================================
-        # CRÍTICO: NÃO sobrescrever config existente para preservar:
-        # - Token de autenticação (sessões ativas)
-        # - Memórias e contexto do agente
-        # - Configurações customizadas pelo usuário
+        # CRÍTICO: NÃO sobrescrever config existente para preservar tokens
         # =======================================================================
         if [[ -f "${CONFIG_FILE}" ]]; then
             log_info "✅ Config existente preservada: ${CONFIG_FILE}"
             
-            # ATUALIZAÇÃO DINÂMICA DE MODELO E HARDENING
-            # Aplica configurações de modelo, segurança e rede no JSON existente
-            log_info "🔄 Atualizando configurações (modelo, rede, segurança) para ${AGENT}..."
+            # ATUALIZAÇÃO DINÂMICA SEGURA
+            log_info "🔄 Atualizando configurações críticas..."
             
-            # trustedProxies: RFC1918 + CGNAT + localhost (cobre RunPod/Tailscale)
-            # controlUi: Habilita Dashboard
-            # bind: 0.0.0.0 para acesso externo
-            # auth: password para usar OPENCLAW_WEB_PASSWORD
-            
+            # Apenas atualiza o que é garantido funcionar nessa versão
             if jq --arg model "$MODEL" \
                   --arg port "$PORT" \
                '.llm.model = $model | 
                 .gateway.port = ($port | tonumber) |
-                .gateway.bind = "0.0.0.0" |
                 .gateway.controlUi.enabled = true |
                 .gateway.controlUi.allowInsecureAuth = true |
-                .gateway.auth.mode = "password" |
-                .gateway.trustedProxies = ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]' \
+                .gateway.auth.mode = "password"' \
                "${CONFIG_FILE}" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"; then
-                log_info "✅ Configurações atualizadas com sucesso"
+                log_info "✅ Configurações atualizadas"
             else
-                log_error "Falha ao atualizar configurações no JSON"
+                log_error "Falha ao atualizar JSON"
             fi
             
             continue
@@ -403,20 +393,24 @@ setup_agents() {
         
         # Gerar token único
         local AGENT_TOKEN="openclaw-${AGENT}-$(head -c 16 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)"
-        
-        # Identidade genérica para agentes dinâmicos
         local AGENT_NAME="Agent ${i}"
         local AGENT_THEME="assistente de IA multiuso"
         local AGENT_EMOJI="🤖"
         
-        # NOTA: Heredoc SEM aspas para permitir interpolação de variáveis
+        # ======================================================================
+        # SCHEMA CORRIGIDO - REMOVIDOS CAMPOS DEPRECIADOS/INVÁLIDOS
+        # - identity: movido para agents.defaults
+        # - gateway.bind: REMOVIDO (usa host 0.0.0.0 implícito ou flag)
+        # - logging.directory: REMOVIDO
+        # - gateway.timeouts: REMOVIDO
+        # - agents.defaults.execution: REMOVIDO
+        # - ollama.api/timeout: REMOVIDOS
+        # ======================================================================
         cat > "${CONFIG_FILE}" <<EOF
 {
-
   "gateway": {
     "mode": "local",
     "port": ${PORT},
-    "bind": "0.0.0.0",
     "controlUi": {
       "enabled": true,
       "allowInsecureAuth": true
@@ -424,11 +418,7 @@ setup_agents() {
     "auth": {
       "mode": "password"
     },
-    "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"],
-    "timeouts": {
-      "request": "300s",
-      "inference": "300s"
-    }
+    "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]
   },
   "session": {
     "dmScope": "per-channel-peer"
@@ -443,10 +433,6 @@ setup_agents() {
       "workspace": "${AGENT_DIR}/workspace",
       "model": {
         "primary": "ollama/${MODEL}"
-      },
-      "execution": {
-        "timeout": "300s",
-        "maxIterations": 50
       }
     }
   },
@@ -456,8 +442,6 @@ setup_agents() {
       "ollama": {
         "apiKey": "ollama-local",
         "baseUrl": "http://localhost:11434/v1",
-        "api": "openai-chat",
-        "timeout": "300s",
         "models": [
           {
             "id": "${MODEL}",
@@ -473,22 +457,15 @@ setup_agents() {
     }
   },
   "logging": {
-    "level": "info",
-    "directory": "/workspace/logs"
+    "level": "info"
   }
 }
 EOF
         
-        # Salvar token gerado para referência
         echo "${AGENT_TOKEN}" > "${AGENT_DIR}/.openclaw/token"
-        
         log_info "Token gerado para ${AGENT}: ${AGENT_TOKEN:0:20}..."
         
-        # Ajustar permissões para hardening (doc security: ~/.openclaw 700, openclaw.json 600)
-        # Mas NFS RunPod não suporta chown/chmod, então mantemos 777
         chmod -R 777 "${AGENT_DIR}"
-        
-        # NOTA: Para hardening completo, rodar 'openclaw doctor' no container
     done
 }
 
