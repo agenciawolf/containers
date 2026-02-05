@@ -532,7 +532,7 @@ setup_agents() {
           {
             "id": "${MODEL}",
             "name": "${MODEL}",
-            "reasoning": true,
+            "reasoning": false,
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
             "contextWindow": 32768,
