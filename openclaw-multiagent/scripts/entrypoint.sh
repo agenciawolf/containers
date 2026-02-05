@@ -378,10 +378,16 @@ setup_agents() {
             
             # Definir origem RunPod explícita se disponível
             local RUNPOD_ORIGIN=""
+            # Tenta pegar do ENV ou do Metadata
+            if [[ -z "${RUNPOD_POD_ID}" ]]; then
+                # Tenta pegar do RunPod Metadata se estivesse vazio
+                RUNPOD_POD_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "")
+            fi
+            
             if [[ -n "${RUNPOD_POD_ID}" ]]; then
                 RUNPOD_ORIGIN="https://${RUNPOD_POD_ID}-${PORT}.proxy.runpod.net"
             fi
-
+            
             # Script JQ complexo para migração e update em uma passada
             jq --arg model "$MODEL" \
                --arg port "$PORT" \
@@ -445,6 +451,11 @@ setup_agents() {
             continue
         fi
         
+        # Tenta pegar do ENV ou do Metadata para nova config
+        if [[ -z "${RUNPOD_POD_ID}" ]]; then
+            RUNPOD_POD_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "")
+        fi
+
         log_info "📝 Criando nova config para ${AGENT}..."
         
         # Gerar token único
