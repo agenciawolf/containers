@@ -527,6 +527,7 @@ setup_agents() {
       "ollama": {
         "apiKey": "ollama-local",
         "baseUrl": "http://localhost:11434/v1",
+        "api": "openai-completions",
         "models": [
           {
             "id": "${MODEL}",
@@ -535,7 +536,7 @@ setup_agents() {
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
             "contextWindow": 32768,
-            "maxTokens": 8192
+            "maxTokens": 81920
           }
         ]
       }
