@@ -39,22 +39,30 @@ ENV RP_WORKSPACE=/workspace \
     OLLAMA_MODELS=/workspace/.ollama/models \
     OLLAMA_HOST=0.0.0.0 \
     OLLAMA_PORT=11434 \
-    OLLAMA_NUM_PARALLEL=3 \
+    OLLAMA_NUM_PARALLEL=4 \
     OLLAMA_MAX_LOADED_MODELS=1 \
     OLLAMA_FLASH_ATTENTION=1 \
-    OLLAMA_ORIGINS="*" \
-    OLLAMA_KEEP_ALIVE=30m \
+    OLLAMA_KV_CACHE_TYPE=q8_0 \
+    OLLAMA_NUM_GPU=999 \
+    OLLAMA_KEEP_ALIVE=-1 \
     OLLAMA_CONTEXT_LENGTH=32768 \
     OLLAMA_DEBUG=false \
     OPENCLAW_HOME=/workspace/.openclaw \
     OPENCLAW_WORKSPACE=/workspace/openclaw-workspace \
     NODE_PATH=/opt/nodejs/lib/node_modules \
     PATH="/opt/nodejs/bin:/usr/local/cuda/bin:${PATH}" \
+    # Cache directories (NFS persistent)
     HF_HOME="/workspace/.cache/huggingface" \
     PIP_CACHE_DIR="/workspace/.cache/pip" \
     UV_CACHE_DIR="/workspace/.cache/uv" \
     NPM_CONFIG_CACHE="/workspace/.cache/npm" \
-    YARN_CACHE_FOLDER="/workspace/.cache/yarn"
+    YARN_CACHE_FOLDER="/workspace/.cache/yarn" \
+    # CUDA Performance Tuning
+    CUDA_DEVICE_ORDER="PCI_BUS_ID" \
+    CUDA_CACHE_PATH="/workspace/.cache/cuda" \
+    CUDA_CACHE_MAXSIZE="2147483648" \
+    NVIDIA_DISABLE_REQUIRE="true" \
+    NVIDIA_DRIVER_CAPABILITIES="compute,utility"
 
 # Instalação otimizada - limpeza em uma única camada
 RUN apt-get update --yes && \

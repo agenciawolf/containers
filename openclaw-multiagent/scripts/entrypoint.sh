@@ -172,6 +172,53 @@ init_directories() {
 }
 
 # ============================================================================
+# FUNÇÃO: Otimização GPU
+# ============================================================================
+optimize_gpu() {
+    log_step "Otimizando GPU para máximo desempenho..."
+    
+    # Verificar memória disponível
+    local mem_total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader 2>/dev/null | head -1)
+    local mem_free=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader 2>/dev/null | head -1)
+    log_info "GPU Memory: ${mem_free} livre de ${mem_total}"
+    
+    # Habilitar persistence mode (reduz latência de cold start)
+    nvidia-smi -pm ENABLED 2>/dev/null || log_warn "Persistence mode não disponível"
+    
+    # Configurar compute mode para exclusive (aproveita toda GPU)
+    nvidia-smi -c EXCLUSIVE_PROCESS 2>/dev/null || true
+    
+    log_info "GPU otimizada"
+}
+
+# ============================================================================
+# FUNÇÃO: Warmup do modelo (pré-carregar na VRAM)
+# ============================================================================
+warmup_model() {
+    log_step "Executando warmup do modelo..."
+    
+    # Aguardar Ollama responder
+    local retries=0
+    while [[ $retries -lt 30 ]]; do
+        if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+            break
+        fi
+        ((retries++))
+        sleep 1
+    done
+    
+    # Fazer requisição inicial para carregar modelo na VRAM
+    log_info "Carregando glm-4.7-flash:latest na VRAM..."
+    curl -sf http://localhost:11434/api/generate \
+        -d '{"model": "glm-4.7-flash:latest", "prompt": "Hello", "stream": false}' \
+        > /dev/null 2>&1 || log_warn "Warmup inicial não completou"
+    
+    # Verificar memória usada
+    local mem_used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader 2>/dev/null | head -1)
+    log_info "Modelo carregado - VRAM em uso: ${mem_used}"
+}
+
+# ============================================================================
 # FUNÇÃO: Configurar Ollama
 # ============================================================================
 setup_ollama() {
@@ -202,16 +249,15 @@ setup_ollama() {
         exit 1
     fi
     
-    # Verificar se modelo GLM-4.7-Flash existe, senão fazer pull
-    log_info "Verificando modelo glm-4.7-flash..."
+# Verificar se modelo GLM-4.7-Flash existe, senão fazer pull
+    log_info "Verificando modelo glm-4.7-flash:latest..."
     if ! ollama list | grep -q "glm-4.7-flash"; then
-        log_info "Baixando modelo glm-4.7-flash (isso pode levar alguns minutos)..."
-        ollama pull glm-4.7-flash || {
-            log_warn "Modelo glm-4.7-flash não encontrado no registry padrão"
-            log_info "Tentando alternativas..."
-            # Tentar nome alternativo ou similar
-            ollama pull qwen2.5:14b
-        }
+        log_info "Baixando modelo glm-4.7-flash:latest (isso pode levar alguns minutos)..."
+        if ! ollama pull glm-4.7-flash:latest; then
+            log_error "Falha ao baixar glm-4.7-flash:latest"
+            log_error "Verifique se o modelo existe no registry Ollama"
+            exit 1
+        fi
     else
         log_info "Modelo glm-4.7-flash já disponível"
     fi
@@ -282,7 +328,11 @@ setup_agents() {
       "mode": "token",
       "token": "${AGENT_TOKEN}"
     },
-    "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]
+    "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"],
+    "timeouts": {
+      "request": "300s",
+      "inference": "300s"
+    }
   },
   "session": {
     "dmScope": "per-channel-peer"
@@ -291,7 +341,11 @@ setup_agents() {
     "defaults": {
       "workspace": "${AGENT_DIR}/workspace",
       "model": {
-        "primary": "ollama/glm-4.7-flash"
+        "primary": "ollama/glm-4.7-flash:latest"
+      },
+      "execution": {
+        "timeout": "300s",
+        "maxIterations": 50
       }
     }
   },
@@ -301,10 +355,11 @@ setup_agents() {
       "ollama": {
         "apiKey": "ollama-local",
         "baseUrl": "http://localhost:11434/v1",
-        "api": "openai-responses",
+        "api": "openai-chat",
+        "timeout": "300s",
         "models": [
           {
-            "id": "glm-4.7-flash",
+            "id": "glm-4.7-flash:latest",
             "name": "GLM 4.7 Flash",
             "reasoning": true,
             "input": ["text"],
