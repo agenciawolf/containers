@@ -372,19 +372,28 @@ setup_agents() {
         if [[ -f "${CONFIG_FILE}" ]]; then
             log_info "✅ Config existente preservada: ${CONFIG_FILE}"
             
-            # ATUALIZAÇÃO DINÂMICA DE MODELO
-            # Se OPENCLAW_MODEL mudou, atualiza no JSON existente mantendo o resto (token, memórias) intacto
-            if [[ -n "${MODEL}" ]]; then
-                local current_model=$(jq -r '.llm.model // empty' "${CONFIG_FILE}" 2>/dev/null || echo "")
-                
-                if [[ "$current_model" != "$MODEL" ]]; then
-                    log_info "🔄 Atualizando modelo de '${current_model}' para '${MODEL}'..."
-                    if jq --arg m "$MODEL" '.llm.model = $m' "${CONFIG_FILE}" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"; then
-                        log_info "✅ Modelo atualizado com sucesso no JSON"
-                    else
-                        log_error "Falha ao atualizar modelo no JSON"
-                    fi
-                fi
+            # ATUALIZAÇÃO DINÂMICA DE MODELO E HARDENING
+            # Aplica configurações de modelo, segurança e rede no JSON existente
+            log_info "🔄 Atualizando configurações (modelo, rede, segurança) para ${AGENT}..."
+            
+            # trustedProxies: RFC1918 + CGNAT + localhost (cobre RunPod/Tailscale)
+            # controlUi: Habilita Dashboard
+            # bind: 0.0.0.0 para acesso externo
+            # auth: password para usar OPENCLAW_WEB_PASSWORD
+            
+            if jq --arg model "$MODEL" \
+                  --arg port "$PORT" \
+               '.llm.model = $model | 
+                .gateway.port = ($port | tonumber) |
+                .gateway.bind = "0.0.0.0" |
+                .gateway.controlUi.enabled = true |
+                .gateway.controlUi.allowInsecureAuth = true |
+                .gateway.auth.mode = "password" |
+                .gateway.trustedProxies = ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]' \
+               "${CONFIG_FILE}" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"; then
+                log_info "✅ Configurações atualizadas com sucesso"
+            else
+                log_error "Falha ao atualizar configurações no JSON"
             fi
             
             continue
@@ -412,9 +421,12 @@ setup_agents() {
     "mode": "local",
     "port": ${PORT},
     "bind": "0.0.0.0",
+    "controlUi": {
+      "enabled": true,
+      "allowInsecureAuth": true
+    },
     "auth": {
-      "mode": "token",
-      "token": "${AGENT_TOKEN}"
+      "mode": "password"
     },
     "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"],
     "timeouts": {
