@@ -470,7 +470,7 @@ setup_agents() {
     "controlUi": {
       "enabled": true,
       "allowInsecureAuth": true,
-      "allowedOrigins": ["*"]
+      "allowedOrigins": ["*"$(if [[ -n "${RUNPOD_POD_ID}" ]]; then echo ", \"https://${RUNPOD_POD_ID}-${PORT}.proxy.runpod.net\""; fi)]
     },
     "auth": {
       "mode": "password"
