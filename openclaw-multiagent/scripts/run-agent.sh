@@ -65,4 +65,4 @@ wait_for_ollama() {
 wait_for_ollama || exit 1
 
 # Iniciar agente - supervisord gerencia logs automaticamente
-exec openclaw gateway --port "${PORT}" --allow-unconfigured --bind loopback
+exec openclaw gateway --port "${PORT}" --allow-unconfigured --bind loopback --token "${OPENCLAW_GATEWAY_TOKEN}"
