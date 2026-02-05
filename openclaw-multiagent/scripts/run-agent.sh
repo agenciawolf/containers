@@ -90,5 +90,5 @@ wait_for_ollama || exit 1
 # Iniciar agente - supervisord gerencia logs automaticamente
 # Usar --config para especificar arquivo de configuração explicitamente
 echo "[$(date)] Starting OpenClaw gateway for ${AGENT} on port ${PORT}..." >&2
-exec openclaw gateway --port "${PORT}" --allow-unconfigured
+exec openclaw gateway --port "${PORT}" --host 0.0.0.0 --allow-unconfigured
 
