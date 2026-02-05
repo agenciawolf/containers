@@ -21,7 +21,7 @@
 
 ### 3. Risco: Consumo Excessivo de GPU
 **Nível:** Médio
-**Descrição:** 3 agentes simultâneos podem sobrecarregar RTX 5090.
+**Descrição:** 3 agentes simultâneos podem sobrecarregar CUDA_VISIBLE_DEVICES=0 (RTX A4500).
 **Mitigação:**
 - OLLAMA_NUM_PARALLEL=3 limita concorrência
 - OLLAMA_MAX_LOADED_MODELS=1 (um modelo na VRAM)

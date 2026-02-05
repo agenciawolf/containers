@@ -1,7 +1,6 @@
-# OpenClaw Multi-Agent Infrastructure
-## RunPod Secure Cloud - RTX 5090
+# OpenClaw Multi-Agent para RunPod Secure Cloud RTX A4500
 
-Arquitetura Ollama (GLM 4.7 Flash) + 3 Agentes OpenClaw isolados.
+Infraestrutura completa para executar 3 agentes OpenClaw isolados com Ollama GPU nativo no RunPod Secure Cloud.
 
 ### Estrutura
 - Ollama: http://localhost:11434 (GPU nativa)
@@ -16,4 +15,4 @@ Tudo em /workspace (volume NFS RunPod).
 docker build -t openclaw-multiagent .
 
 ### Deploy RunPod
-Usar imagem custom com GPU RTX 5090, expor portas 11434,18790-18792.
+Usar imagem custom com GPU RTX A4500, expor portas 11434,18790-18792.

@@ -10,7 +10,7 @@ $TAG = if ($args[0]) { $args[0] } else { "1.1" }
 $FULL_IMAGE = "$IMAGE_NAME`:$TAG"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "OpenClaw Multi-Agent - Build & Push" -ForegroundColor Cyan
+Write-Host "OpenClaw Multi-Agent - Build & Push para RunPod RTX A4500" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -98,7 +98,7 @@ Write-Host "Para usar no RunPod:" -ForegroundColor Yellow
 Write-Host "1. Crie um novo Pod" -ForegroundColor White
 Write-Host "2. Escolha 'Custom Image'" -ForegroundColor White
 Write-Host "3. Cole: $FULL_IMAGE" -ForegroundColor White
-Write-Host "4. Configure GPU RTX 5090" -ForegroundColor White
+Write-Host "4. Configure GPU RTX A4500" -ForegroundColor White
 Write-Host "5. Exponha portas: 11434, 18790, 18791, 18792" -ForegroundColor White
 Write-Host ""
 Write-Host "Ou use diretamente via docker:" -ForegroundColor Yellow

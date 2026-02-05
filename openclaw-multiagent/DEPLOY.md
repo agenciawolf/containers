@@ -1,5 +1,5 @@
 # Checklist de Produção - OpenClaw Multi-Agent
-## RunPod Secure Cloud RTX 5090
+## RunPod Secure Cloud RTX A4500
 
 ## ✅ Correções Críticas Aplicadas
 
@@ -21,7 +21,7 @@
 - [x] `OLLAMA_ORIGINS="*"` para acesso externo
 - [x] `OLLAMA_FLASH_ATTENTION=1` (otimização VRAM)
 - [x] `OLLAMA_NUM_PARALLEL=3` (3 agentes)
-- [x] `CUDA_VISIBLE_DEVICES=0` (RTX 5090)
+- [x] `CUDA_VISIBLE_DEVICES=0` (RTX A4500)
 
 ### 4. Isolamento e Segurança
 - [x] Usuários: planner(1001), coder(1002), hacker(1003)

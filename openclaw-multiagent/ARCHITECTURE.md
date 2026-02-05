@@ -1,7 +1,7 @@
 # Arquitetura OpenClaw Multi-Agent - Análise do Arquiteto
 
 ## Visão Geral
-Infraestrutura Ollama (GPU nativo) + 3 agentes OpenClaw isolados em RunPod Secure Cloud RTX 5090.
+Infraestrutura Ollama (GPU nativo) + 3 agentes OpenClaw isolados em RunPod Secure Cloud RTX A4500.
 
 ## Componentes Criados
 - `Dockerfile`: Imagem otimizada com CUDA 12.4, Ollama, Node 22, OpenClaw

@@ -362,7 +362,7 @@ full_setup() {
 main() {
     log_info "========================================"
     log_info "OpenClaw Multi-Agent Infrastructure"
-    log_info "RunPod Secure Cloud - RTX 5090"
+    log_info "RunPod Secure Cloud - RTX A4500"
     log_info "========================================"
     
     # Verificar se é primeira execução
