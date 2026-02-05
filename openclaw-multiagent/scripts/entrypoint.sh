@@ -412,11 +412,7 @@ setup_agents() {
         # NOTA: Heredoc SEM aspas para permitir interpolação de variáveis
         cat > "${CONFIG_FILE}" <<EOF
 {
-  "identity": {
-    "name": "${AGENT_NAME}",
-    "theme": "${AGENT_THEME}",
-    "emoji": "${AGENT_EMOJI}"
-  },
+
   "gateway": {
     "mode": "local",
     "port": ${PORT},
@@ -439,6 +435,11 @@ setup_agents() {
   },
   "agents": {
     "defaults": {
+      "identity": {
+        "name": "${AGENT_NAME}",
+        "theme": "${AGENT_THEME}",
+        "emoji": "${AGENT_EMOJI}"
+      },
       "workspace": "${AGENT_DIR}/workspace",
       "model": {
         "primary": "ollama/${MODEL}"
