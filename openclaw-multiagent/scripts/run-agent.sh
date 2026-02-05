@@ -21,6 +21,14 @@ export PATH="/opt/nodejs/bin:${PATH}"
 # Configuração de log
 LOG_FILE="/workspace/logs/${AGENT}.log"
 
+# Garantir permissões corretas no diretório e arquivo de log
+mkdir -p /workspace/logs
+chmod 777 /workspace/logs
+if [[ ! -f "${LOG_FILE}" ]]; then
+    touch "${LOG_FILE}"
+    chmod 666 "${LOG_FILE}"
+fi
+
 # Graceful shutdown handler
 cleanup() {
     echo "[$(date)] Received shutdown signal, stopping ${AGENT}..." >> "${LOG_FILE}"
