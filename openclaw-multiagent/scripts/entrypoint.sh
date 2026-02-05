@@ -500,6 +500,7 @@ setup_agents() {
   },
   "agents": {
     "defaults": {
+      "thinkingDefault": "off",
       "model": {
         "primary": "ollama/${MODEL}"
       },
@@ -532,7 +533,7 @@ setup_agents() {
           {
             "id": "${MODEL}",
             "name": "${MODEL}",
-            "reasoning": false,
+            "reasoning": true,
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
             "contextWindow": 32768,
