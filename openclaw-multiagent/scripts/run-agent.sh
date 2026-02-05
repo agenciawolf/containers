@@ -32,9 +32,9 @@ cleanup() {
 }
 trap cleanup SIGTERM SIGINT
 
-# Verificar se config existe
-if [[ ! -f "${OPENCLAW_HOME}/config.yaml" ]]; then
-    echo "[ERROR] Config file not found: ${OPENCLAW_HOME}/config.yaml" >&2
+# Verificar se config existe (JSON conforme docs OpenClaw)
+if [[ ! -f "${OPENCLAW_HOME}/openclaw.json" ]]; then
+    echo "[ERROR] Config file not found: ${OPENCLAW_HOME}/openclaw.json" >&2
     exit 1
 fi
 
