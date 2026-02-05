@@ -376,10 +376,19 @@ setup_agents() {
             # 1. Migrar 'agents.defaults.identity' para 'agents.list[0].identity' (Fix Schema)
             # 2. Atualizar modelo, portas, auth e controlUi
             
+            # Definir origem RunPod explícita se disponível
+            local RUNPOD_ORIGIN=""
+            if [[ -n "${RUNPOD_POD_ID}" ]]; then
+                RUNPOD_ORIGIN="https://${RUNPOD_POD_ID}-${PORT}.proxy.runpod.net"
+            fi
+
             # Script JQ complexo para migração e update em uma passada
             jq --arg model "$MODEL" \
                --arg port "$PORT" \
+               --arg rp_origin "$RUNPOD_ORIGIN" \
                '
+               # ... (blocos 1 e else mantidos iguais) ...
+               
                # 1. MIGRAÇÃO DE SCHEMA (defaults -> list)
                if .agents.defaults.identity then
                  .agents.list = [
@@ -406,7 +415,12 @@ setup_agents() {
                .gateway.port = ($port | tonumber) |
                .gateway.controlUi.enabled = true |
                .gateway.controlUi.allowInsecureAuth = true |
-               .gateway.controlUi.allowedOrigins = ["*"] |
+               # Adiciona * e a origem exata do RunPod se existir
+               if $rp_origin != "" then
+                 .gateway.controlUi.allowedOrigins = ["*", $rp_origin]
+               else
+                 .gateway.controlUi.allowedOrigins = ["*"]
+               end |
                .gateway.auth.mode = "password" |
                
                # Se agents.list existe, atualiza o modelo lá também e remove execution se existir
