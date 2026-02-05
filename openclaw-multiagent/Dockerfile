@@ -149,8 +149,8 @@ COPY config/supervisord.conf /etc/supervisor/conf.d/
 HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=3 \
     CMD /opt/scripts/health-check.sh
 
-# Portas expostas
-EXPOSE 11434 18790 18791 18792 22
+# Portas expostas (Ollama + até 10 agentes + SSH)
+EXPOSE 11434 18790-18799 22
 
 WORKDIR /workspace
 

@@ -227,6 +227,14 @@ optimize_gpu() {
 warmup_model() {
     log_step "Executando warmup do modelo..."
     
+    local MODEL="${OPENCLAW_MODEL:-glm-4.7-flash:latest}"
+    local WARMUP_ENABLED="${OPENCLAW_WARMUP_ENABLED:-true}"
+    
+    if [[ "$WARMUP_ENABLED" != "true" ]]; then
+        log_info "Warmup desabilitado via OPENCLAW_WARMUP_ENABLED"
+        return 0
+    fi
+    
     # Aguardar Ollama responder
     local retries=0
     while [[ $retries -lt 30 ]]; do
@@ -238,9 +246,9 @@ warmup_model() {
     done
     
     # Fazer requisição inicial para carregar modelo na VRAM
-    log_info "Carregando glm-4.7-flash:latest na VRAM..."
+    log_info "Carregando ${MODEL} na VRAM..."
     curl -sf http://localhost:11434/api/generate \
-        -d '{"model": "glm-4.7-flash:latest", "prompt": "Hello", "stream": false}' \
+        -d "{\"model\": \"${MODEL}\", \"prompt\": \"Hello\", \"stream\": false}" \
         > /dev/null 2>&1 || log_warn "Warmup inicial não completou"
     
     # Verificar memória usada
@@ -540,7 +548,7 @@ HEADER
 [program:openclaw-${AGENT}]
 command=/opt/scripts/run-agent.sh ${AGENT} ${PORT}
 user=root
-environment=HOME="/workspace/agents/${AGENT}",AGENT_NAME="${AGENT}",AGENT_PORT="${PORT}"
+environment=HOME="/workspace/agents/${AGENT}",AGENT_NAME="${AGENT}",AGENT_PORT="${PORT}",OPENCLAW_WEB_PASSWORD="%(ENV_OPENCLAW_WEB_PASSWORD)s"
 autostart=true
 autorestart=true
 startretries=5
@@ -616,7 +624,16 @@ main() {
         date > "${SETUP_MARKER}"
     else
         log_info "Setup já realizado em: $(cat "${SETUP_MARKER}")"
-        log_info "Pulando configuração inicial..."
+        log_info "Executando setup parcial para restart..."
+        
+        # CRÍTICO: Mesmo em restart, precisamos:
+        # 1. Verificar/criar symlinks (podem ter sido perdidos)
+        init_directories
+        
+        # 2. Regenerar config do supervisor (variáveis podem ter mudado)
+        generate_supervisor_config
+        
+        log_info "Setup parcial completo"
     fi
     
     # Executar comando passado ou iniciar supervisord
