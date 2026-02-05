@@ -31,14 +31,14 @@ fi
 
 # Graceful shutdown handler
 cleanup() {
-    echo "[$(date)] Received shutdown signal, stopping ${AGENT}..." >> "${LOG_FILE}"
+    echo "[$(date)] Received shutdown signal, stopping ${AGENT}..." >&2
     exit 0
 }
 trap cleanup SIGTERM SIGINT
 
 # Verificar se config existe
 if [[ ! -f "${OPENCLAW_HOME}/config.yaml" ]]; then
-    echo "[ERROR] Config file not found: ${OPENCLAW_HOME}/config.yaml" >> "${LOG_FILE}"
+    echo "[ERROR] Config file not found: ${OPENCLAW_HOME}/config.yaml" >&2
     exit 1
 fi
 
@@ -52,22 +52,21 @@ wait_for_ollama() {
     
     while [[ $retry -lt $max_retries ]]; do
         if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
-            echo "[$(date)] Ollama is ready" >> "${LOG_FILE}"
+            echo "[$(date)] Ollama is ready" >&2
             return 0
         fi
-        echo "[$(date)] Waiting for Ollama... (attempt $((retry+1))/${max_retries})" >> "${LOG_FILE}"
+        echo "[$(date)] Waiting for Ollama... (attempt $((retry+1))/${max_retries})" >&2
         sleep $backoff
         backoff=$((backoff * 2))
         [[ $backoff -gt 10 ]] && backoff=10
         ((retry++))
     done
     
-    echo "[ERROR] Ollama not available after ${max_retries} attempts" >> "${LOG_FILE}"
+    echo "[ERROR] Ollama not available after ${max_retries} attempts" >&2
     return 1
 }
 
 wait_for_ollama || exit 1
 
-# Iniciar agente com logging estruturado
-echo "[$(date)] Starting ${AGENT} on port ${PORT}" >> "${LOG_FILE}"
-exec openclaw gateway --port "${PORT}" --config "${OPENCLAW_HOME}/config.yaml" 2>&1 | tee -a "${LOG_FILE}"
+# Iniciar agente - logs vão para stdout (supervisord captura automaticamente)
+exec openclaw gateway --port "${PORT}" --config "${OPENCLAW_HOME}/config.yaml"
