@@ -2,9 +2,19 @@
 
 Container Docker otimizado para rodar múltiplos agentes OpenClaw com Ollama em GPUs NVIDIA, especialmente configurado para **RunPod Secure Cloud**.
 
-## 🚀 Quick Start
+## � Documentação Essencial
 
-```bash
+- **[Guia de Setup no Painel RunPod](RUNPOD_TEMPLATE_SETUP.md)** 👈 **Comece por aqui!**
+- **[Guia de Acesso e Login](ACCESS_GUIDE.md)**
+
+## �🚀 Quick Start (RunPod)
+
+1. **Escolha a Imagem:** `blacktech/openclaw-multiagent:latest`
+2. **Defina a Senha:** Variável `OPENCLAW_WEB_PASSWORD` (Obrigatória).
+3. **Exponha as Portas:** `18790, 18791, 18792` (para 3 agentes).
+4. **Volume Mount:** `/workspace` (Mínimo 50GB).
+
+Se estiver rodando **localmente** via Docker:
 docker run -d --gpus all \
   -p 18790:18790 \
   -e OPENCLAW_WEB_PASSWORD=sua_senha_forte \
@@ -24,6 +34,7 @@ docker run -d --gpus all \
 | `OPENCLAW_MODEL` | `glm-4.7-flash:latest` | Modelo Ollama |
 | `OPENCLAW_MODEL_AUTO_PULL` | `true` | Baixar modelo se não existir |
 | `OPENCLAW_WARMUP_ENABLED` | `true` | Pré-carregar modelo na VRAM |
+| `OPENCLAW_WEB_PASSWORD` | **OBRIGATÓRIO** | Senha Mestra para Dashboards |
 
 ### Performance GPU
 
@@ -101,6 +112,7 @@ Dados persistem em `/workspace` (RunPod NFS):
 - **Tokens únicos**: Cada agente tem seu token de autenticação
 - **Logs mascarados**: Tokens e senhas não aparecem nos logs
 - **Trusted Proxies**: Configurados para redes internas
+- **Auto-Detecção de RunPod**: O log de inicialização detecta se está no RunPod e exibe os **Links Exatos de Acesso** (https://...), eliminando a adivinhação de URLs.
 
 ## 📝 Logs
 
