@@ -406,6 +406,7 @@ setup_agents() {
                .gateway.port = ($port | tonumber) |
                .gateway.controlUi.enabled = true |
                .gateway.controlUi.allowInsecureAuth = true |
+               .gateway.controlUi.allowedOrigins = ["*"] |
                .gateway.auth.mode = "password" |
                
                # Se agents.list existe, atualiza o modelo lá também e remove execution se existir
@@ -453,7 +454,8 @@ setup_agents() {
     "port": ${PORT},
     "controlUi": {
       "enabled": true,
-      "allowInsecureAuth": true
+      "allowInsecureAuth": true,
+      "allowedOrigins": ["*"]
     },
     "auth": {
       "mode": "password"

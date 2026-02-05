@@ -113,6 +113,7 @@ Dados persistem em `/workspace` (RunPod NFS):
 - **Logs mascarados**: Tokens e senhas não aparecem nos logs
 - **Trusted Proxies**: Configurados para redes internas
 - **Auto-Detecção de RunPod**: O log de inicialização detecta se está no RunPod e exibe os **Links Exatos de Acesso** (https://...), eliminando a adivinhação de URLs.
+- **CORS/Origin**: Configurado automaticamente para aceitar conexões do RunPod Proxy (Wildcard) evitando erros `1008 origin not allowed`.
 
 ## 📝 Logs
 
