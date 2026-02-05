@@ -468,13 +468,18 @@ setup_agents() {
         
         # ======================================================================
         # SCHEMA CORRIGIDO - REMOVIDOS CAMPOS DEPRECIADOS/INVÁLIDOS
-        # - identity: movido para agents.defaults
-        # - gateway.bind: REMOVIDO (usa host 0.0.0.0 implícito ou flag)
-        # - logging.directory: REMOVIDO
-        # - gateway.timeouts: REMOVIDO
-        # - agents.defaults.execution: REMOVIDO
-        # - ollama.api/timeout: REMOVIDOS
-        # ======================================================================
+        # Construir string de origens permitidas
+        # TENTATIVA AGRESSIVA: Apenas a origem exata do RunPod se existir, ou * se não
+        local ALLOWED_ORIGINS_JSON="\"*\""
+        if [[ -n "${RUNPOD_POD_ID}" ]]; then
+            local RP_URL="https://${RUNPOD_POD_ID}-${PORT}.proxy.runpod.net"
+            # Remove o wildcard para forçar validação estrita na URL correta
+            ALLOWED_ORIGINS_JSON="\"${RP_URL}\""
+            log_info "🌍 Origem RunPod detectada: ${RP_URL} (Modo Estrito)"
+        fi
+        
+        log_info "📝 Configurando allowedOrigins: [${ALLOWED_ORIGINS_JSON}]"
+
         cat > "${CONFIG_FILE}" <<EOF
 {
   "gateway": {
@@ -483,12 +488,12 @@ setup_agents() {
     "controlUi": {
       "enabled": true,
       "allowInsecureAuth": true,
-      "allowedOrigins": ["*"$(if [[ -n "${RUNPOD_POD_ID}" ]]; then echo ", \"https://${RUNPOD_POD_ID}-${PORT}.proxy.runpod.net\""; fi)]
+      "allowedOrigins": [${ALLOWED_ORIGINS_JSON}]
     },
     "auth": {
       "mode": "password"
     },
-    "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]
+    "trustedProxies": ["0.0.0.0/0"]
   },
   "session": {
     "dmScope": "per-channel-peer"
