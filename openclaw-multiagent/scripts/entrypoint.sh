@@ -385,14 +385,21 @@ setup_agents() {
                  .agents.list = [
                    (.agents.defaults + 
                     {
+                      "id": "'"${AGENT}"'",
                       "identity": .agents.defaults.identity,
                       "workspace": (.agents.defaults.workspace // "/workspace/agents/'"${AGENT}"'/workspace"),
                       "model": (.agents.defaults.model // {"primary": "ollama/" + $model})
                     }
                    )
                  ] |
-                 del(.agents.defaults)
-               else . end |
+                 del(.agents.defaults) |
+                 del(.agents.list[0].execution)
+               else 
+                 # Garante que ID existe mesmo se já estiver no formato list (mas antigo)
+                 if .agents.list and .agents.list[0] and (.agents.list[0].id | not) then
+                    .agents.list[0].id = "'"${AGENT}"'"
+                 else . end
+               end |
 
                # 2. ATUALIZAÇÃO DE VALORES
                .llm.model = $model | 
@@ -401,9 +408,10 @@ setup_agents() {
                .gateway.controlUi.allowInsecureAuth = true |
                .gateway.auth.mode = "password" |
                
-               # Se agents.list existe (pós-migração ou nativo), atualiza o modelo lá também
+               # Se agents.list existe, atualiza o modelo lá também e remove execution se existir
                if .agents.list then
-                 .agents.list[0].model.primary = "ollama/" + $model
+                 .agents.list[0].model.primary = "ollama/" + $model |
+                 del(.agents.list[0].execution)
                else . end
                ' \
                "${CONFIG_FILE}" > "${CONFIG_FILE}.tmp"
@@ -458,6 +466,7 @@ setup_agents() {
   "agents": {
     "list": [
       {
+        "id": "${AGENT}",
         "identity": {
           "name": "${AGENT_NAME}",
           "theme": "${AGENT_THEME}",
@@ -466,10 +475,6 @@ setup_agents() {
         "workspace": "${AGENT_DIR}/workspace",
         "model": {
           "primary": "ollama/${MODEL}"
-        },
-        "execution": {
-          "timeout": "300s",
-          "maxIterations": 50
         }
       }
     ]
