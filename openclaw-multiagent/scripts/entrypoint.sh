@@ -254,17 +254,27 @@ setup_ollama() {
         exit 1
     fi
     
-# Verificar se modelo GLM-4.7-Flash existe, senão fazer pull
+# =======================================================================
+    # CRÍTICO: Verificar se modelo já existe antes de baixar novamente
+    # Isso preserva modelos já baixados em /workspace/.ollama/models
+    # =======================================================================
     log_info "Verificando modelo glm-4.7-flash:latest..."
-    if ! ollama list | grep -q "glm-4.7-flash"; then
-        log_info "Baixando modelo glm-4.7-flash:latest (isso pode levar alguns minutos)..."
+    
+    # Primeiro verificar se já está registrado no Ollama
+    if ollama list 2>/dev/null | grep -q "glm-4.7-flash"; then
+        log_info "✅ Modelo glm-4.7-flash já registrado no Ollama"
+    # Segundo: verificar se os arquivos existem no disco (pode precisar re-registrar)
+    elif [[ -d "/workspace/.ollama/models/manifests" ]] && find /workspace/.ollama/models -name "*glm*" -type f 2>/dev/null | grep -q .; then
+        log_info "📁 Arquivos do modelo encontrados em /workspace/.ollama/models"
+        log_info "   Ollama detectará automaticamente ao iniciar"
+    else
+        log_info "📥 Baixando modelo glm-4.7-flash:latest (primeira execução)..."
         if ! ollama pull glm-4.7-flash:latest; then
             log_error "Falha ao baixar glm-4.7-flash:latest"
             log_error "Verifique se o modelo existe no registry Ollama"
             exit 1
         fi
-    else
-        log_info "Modelo glm-4.7-flash já disponível"
+        log_info "✅ Modelo baixado e salvo em /workspace/.ollama/models (persistente)"
     fi
     
     # Parar Ollama temporário
@@ -293,8 +303,23 @@ setup_agents() {
         # Criar configuração específica do agente (JSON conforme docs OpenClaw)
         local CONFIG_FILE="${AGENT_DIR}/.openclaw/openclaw.json"
         mkdir -p "${AGENT_DIR}/.openclaw"
+        mkdir -p "${AGENT_DIR}/workspace"
         
-        # Gerar token único para este agente
+        # =======================================================================
+        # CRÍTICO: NÃO sobrescrever config existente para preservar:
+        # - Token de autenticação (sessões ativas)
+        # - Memórias e contexto do agente
+        # - Configurações customizadas pelo usuário
+        # =======================================================================
+        if [[ -f "${CONFIG_FILE}" ]]; then
+            log_info "✅ Config existente preservada: ${CONFIG_FILE}"
+            log_info "   (Para forçar recriação, delete manualmente o arquivo)"
+            continue
+        fi
+        
+        log_info "📝 Criando nova config para ${AGENT}..."
+        
+        # Gerar token único para este agente (apenas na primeira execução)
         local AGENT_TOKEN="openclaw-${AGENT}-$(head -c 16 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)"
         
         # Definir identidade por agente
