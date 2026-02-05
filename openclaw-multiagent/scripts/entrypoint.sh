@@ -140,8 +140,13 @@ init_directories() {
     # Limpar circuit breaker de execuções anteriores (evita bloqueio persistente)
     rm -f "${WORKSPACE}/.circuit-breaker."* 2>/dev/null || true
     
-    # Diretórios dos agentes - dados persistentes
-    for agent in planner coder hacker; do
+    # Variáveis dinâmicas
+    local NUM_AGENTS="${OPENCLAW_NUM_AGENTS:-3}"
+    local AGENT_PREFIX="${OPENCLAW_AGENT_PREFIX:-agent}"
+    
+    # Diretórios dos agentes - dados persistentes (DINÂMICO)
+    for i in $(seq 1 $NUM_AGENTS); do
+        local agent="${AGENT_PREFIX}_${i}"
         mkdir -p "${AGENTS_DIR}/${agent}"/.openclaw
         mkdir -p "${AGENTS_DIR}/${agent}"/workspace
         # Diretório de sessões do OpenClaw (crítico para persistência de conversas)
@@ -167,9 +172,15 @@ init_directories() {
     log_info "📁 Modelos Ollama: /root/.ollama → ${WORKSPACE}/.ollama/models (persistente)"
     
     # Symlinks de /home/<user> para /workspace/agents/<user> (OpenClaw compatibilidade)
-    for agent in planner coder hacker; do
+    for i in $(seq 1 $NUM_AGENTS); do
+        local agent="${AGENT_PREFIX}_${i}"
         local USER_HOME="/home/${agent}"
         local AGENT_DATA="${AGENTS_DIR}/${agent}"
+        
+        # Criar user se não existir
+        if ! id "${agent}" &>/dev/null; then
+            useradd -m -d "${USER_HOME}" -s /usr/sbin/nologin "${agent}" 2>/dev/null || true
+        fi
         
         # Remover .openclaw existente em /home se houver
         rm -rf "${USER_HOME}/.openclaw" 2>/dev/null || true
@@ -272,23 +283,31 @@ setup_ollama() {
     # CRÍTICO: Verificar se modelo já existe antes de baixar novamente
     # Isso preserva modelos já baixados em /workspace/.ollama/models
     # =======================================================================
-    log_info "Verificando modelo glm-4.7-flash:latest..."
+    local MODEL="${OPENCLAW_MODEL:-glm-4.7-flash:latest}"
+    local AUTO_PULL="${OPENCLAW_MODEL_AUTO_PULL:-true}"
+    
+    log_info "Verificando modelo ${MODEL}..."
+    
+    # Extrair nome base do modelo para busca
+    local MODEL_BASE=$(echo "$MODEL" | cut -d':' -f1)
     
     # Primeiro verificar se já está registrado no Ollama
-    if ollama list 2>/dev/null | grep -q "glm-4.7-flash"; then
-        log_info "✅ Modelo glm-4.7-flash já registrado no Ollama"
-    # Segundo: verificar se os arquivos existem no disco (pode precisar re-registrar)
-    elif [[ -d "/workspace/.ollama/models/manifests" ]] && find /workspace/.ollama/models -name "*glm*" -type f 2>/dev/null | grep -q .; then
+    if ollama list 2>/dev/null | grep -q "${MODEL_BASE}"; then
+        log_info "✅ Modelo ${MODEL} já registrado no Ollama"
+    # Segundo: verificar se os arquivos existem no disco
+    elif [[ -d "/workspace/.ollama/models/manifests" ]] && find /workspace/.ollama/models -name "*${MODEL_BASE}*" -type f 2>/dev/null | grep -q .; then
         log_info "📁 Arquivos do modelo encontrados em /workspace/.ollama/models"
         log_info "   Ollama detectará automaticamente ao iniciar"
-    else
-        log_info "📥 Baixando modelo glm-4.7-flash:latest (primeira execução)..."
-        if ! ollama pull glm-4.7-flash:latest; then
-            log_error "Falha ao baixar glm-4.7-flash:latest"
+    elif [[ "$AUTO_PULL" == "true" ]]; then
+        log_info "📥 Baixando modelo ${MODEL} (primeira execução)..."
+        if ! ollama pull "${MODEL}"; then
+            log_error "Falha ao baixar ${MODEL}"
             log_error "Verifique se o modelo existe no registry Ollama"
             exit 1
         fi
         log_info "✅ Modelo baixado e salvo em /workspace/.ollama/models (persistente)"
+    else
+        log_warn "⚠️ Modelo ${MODEL} não encontrado e AUTO_PULL desabilitado"
     fi
     
     # Parar Ollama temporário
@@ -299,25 +318,42 @@ setup_ollama() {
 }
 
 # ============================================================================
-# FUNÇÃO: Configurar Agentes OpenClaw
+# FUNÇÃO: Configurar Agentes OpenClaw (DINÂMICO)
 # ============================================================================
 setup_agents() {
     log_step "Configurando agentes OpenClaw..."
     
-    local AGENTS=("planner" "coder" "hacker")
-    local PORTS=(18790 18791 18792)
+    # Variáveis dinâmicas da comunidade
+    local NUM_AGENTS="${OPENCLAW_NUM_AGENTS:-3}"
+    local AGENT_PREFIX="${OPENCLAW_AGENT_PREFIX:-agent}"
+    local BASE_PORT="${OPENCLAW_BASE_PORT:-18790}"
+    local MODEL="${OPENCLAW_MODEL:-glm-4.7-flash:latest}"
     
-    for i in "${!AGENTS[@]}"; do
-        local AGENT="${AGENTS[$i]}"
-        local PORT="${PORTS[$i]}"
+    log_info "Configuração: ${NUM_AGENTS} agentes, modelo: ${MODEL}"
+    
+    # Validar número de agentes
+    if [[ $NUM_AGENTS -lt 1 || $NUM_AGENTS -gt 10 ]]; then
+        log_error "OPENCLAW_NUM_AGENTS deve ser entre 1 e 10 (recebido: ${NUM_AGENTS})"
+        exit 1
+    fi
+    
+    # Criar agentes dinamicamente
+    for i in $(seq 1 $NUM_AGENTS); do
+        local AGENT="${AGENT_PREFIX}_${i}"
+        local PORT=$((BASE_PORT + i - 1))
         local AGENT_DIR="${AGENTS_DIR}/${AGENT}"
         
         log_info "Configurando agente: ${AGENT} (porta ${PORT})"
         
-        # Criar configuração específica do agente (JSON conforme docs OpenClaw)
+        # Criar diretórios
         local CONFIG_FILE="${AGENT_DIR}/.openclaw/openclaw.json"
         mkdir -p "${AGENT_DIR}/.openclaw"
         mkdir -p "${AGENT_DIR}/workspace"
+        
+        # Criar usuário Linux se não existir
+        if ! id "${AGENT}" &>/dev/null; then
+            useradd -m -d "/home/${AGENT}" -s /usr/sbin/nologin "${AGENT}" 2>/dev/null || true
+        fi
         
         # =======================================================================
         # CRÍTICO: NÃO sobrescrever config existente para preservar:
@@ -327,34 +363,18 @@ setup_agents() {
         # =======================================================================
         if [[ -f "${CONFIG_FILE}" ]]; then
             log_info "✅ Config existente preservada: ${CONFIG_FILE}"
-            log_info "   (Para forçar recriação, delete manualmente o arquivo)"
             continue
         fi
         
         log_info "📝 Criando nova config para ${AGENT}..."
         
-        # Gerar token único para este agente (apenas na primeira execução)
+        # Gerar token único
         local AGENT_TOKEN="openclaw-${AGENT}-$(head -c 16 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)"
         
-        # Definir identidade por agente
-        local AGENT_NAME AGENT_THEME AGENT_EMOJI
-        case "${AGENT}" in
-            planner)
-                AGENT_NAME="Planner"
-                AGENT_THEME="planejamento e arquitetura de sistemas"
-                AGENT_EMOJI="🗺️"
-                ;;
-            coder)
-                AGENT_NAME="Coder"
-                AGENT_THEME="desenvolvimento e implementação de código"
-                AGENT_EMOJI="💻"
-                ;;
-            hacker)
-                AGENT_NAME="Hacker"
-                AGENT_THEME="segurança, testes e hardening"
-                AGENT_EMOJI="🔒"
-                ;;
-        esac
+        # Identidade genérica para agentes dinâmicos
+        local AGENT_NAME="Agent ${i}"
+        local AGENT_THEME="assistente de IA multiuso"
+        local AGENT_EMOJI="🤖"
         
         # NOTA: Heredoc SEM aspas para permitir interpolação de variáveis
         cat > "${CONFIG_FILE}" <<EOF
@@ -385,7 +405,7 @@ setup_agents() {
     "defaults": {
       "workspace": "${AGENT_DIR}/workspace",
       "model": {
-        "primary": "ollama/glm-4.7-flash:latest"
+        "primary": "ollama/${MODEL}"
       },
       "execution": {
         "timeout": "300s",
@@ -403,8 +423,8 @@ setup_agents() {
         "timeout": "300s",
         "models": [
           {
-            "id": "glm-4.7-flash:latest",
-            "name": "GLM 4.7 Flash",
+            "id": "${MODEL}",
+            "name": "${MODEL}",
             "reasoning": true,
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
@@ -453,11 +473,14 @@ create_agent_scripts() {
 }
 
 # ============================================================================
-# FUNÇÃO: Health Check
+# FUNÇÃO: Health Check (DINÂMICO)
 # ============================================================================
 health_check() {
     log_step "Executando health check..."
     
+    local NUM_AGENTS="${OPENCLAW_NUM_AGENTS:-3}"
+    local AGENT_PREFIX="${OPENCLAW_AGENT_PREFIX:-agent}"
+    local BASE_PORT="${OPENCLAW_BASE_PORT:-18790}"
     local FAILURES=0
     
     # Verificar Ollama
@@ -468,19 +491,73 @@ health_check() {
         ((FAILURES++))
     fi
     
-    # Verificar agentes
-    local PORTS=(18790 18791 18792)
-    local NAMES=("planner" "coder" "hacker")
-    
-    for i in "${!PORTS[@]}"; do
-        if curl -s "http://localhost:${PORTS[$i]}/health" > /dev/null 2>&1; then
-            log_info "✓ Agente ${NAMES[$i]} está respondendo na porta ${PORTS[$i]}"
+    # Verificar agentes dinamicamente
+    for i in $(seq 1 $NUM_AGENTS); do
+        local AGENT="${AGENT_PREFIX}_${i}"
+        local PORT=$((BASE_PORT + i - 1))
+        
+        if curl -s "http://localhost:${PORT}/" > /dev/null 2>&1; then
+            log_info "✓ Agente ${AGENT} está respondendo na porta ${PORT}"
         else
-            log_warn "✗ Agente ${NAMES[$i]} não está respondendo na porta ${PORTS[$i]}"
+            log_warn "✗ Agente ${AGENT} não está respondendo na porta ${PORT}"
         fi
     done
     
     return $FAILURES
+}
+
+# ============================================================================
+# FUNÇÃO: Gerar configuração dinâmica do Supervisor
+# ============================================================================
+generate_supervisor_config() {
+    log_step "Gerando configuração dinâmica do Supervisor..."
+    
+    local NUM_AGENTS="${OPENCLAW_NUM_AGENTS:-3}"
+    local AGENT_PREFIX="${OPENCLAW_AGENT_PREFIX:-agent}"
+    local BASE_PORT="${OPENCLAW_BASE_PORT:-18790}"
+    local SUPERVISOR_CONF="/etc/supervisor/conf.d/supervisord.conf"
+    local DYNAMIC_AGENTS_CONF="/workspace/.supervisor/agents.conf"
+    
+    log_info "Gerando config para ${NUM_AGENTS} agentes (${AGENT_PREFIX}_1 até ${AGENT_PREFIX}_${NUM_AGENTS})"
+    
+    # Criar arquivo de configuração dinâmica dos agentes
+    mkdir -p /workspace/.supervisor
+    
+    cat > "${DYNAMIC_AGENTS_CONF}" <<'HEADER'
+; =============================================================================
+; AGENTES OPENCLAW - GERADO DINAMICAMENTE
+; Este arquivo é recriado a cada restart baseado em OPENCLAW_NUM_AGENTS
+; =============================================================================
+HEADER
+    
+    for i in $(seq 1 $NUM_AGENTS); do
+        local AGENT="${AGENT_PREFIX}_${i}"
+        local PORT=$((BASE_PORT + i - 1))
+        local PRIORITY=$((20 + i))
+        
+        cat >> "${DYNAMIC_AGENTS_CONF}" <<EOF
+
+[program:openclaw-${AGENT}]
+command=/opt/scripts/run-agent.sh ${AGENT} ${PORT}
+user=root
+environment=HOME="/workspace/agents/${AGENT}",AGENT_NAME="${AGENT}",AGENT_PORT="${PORT}"
+autostart=true
+autorestart=true
+startretries=5
+startsecs=15
+stopsignal=TERM
+stopwaitsecs=30
+stdout_logfile=/workspace/logs/${AGENT}.log
+stderr_logfile=/workspace/logs/${AGENT}-error.log
+stdout_logfile_maxbytes=50MB
+stdout_logfile_backups=3
+stderr_logfile_maxbytes=50MB
+stderr_logfile_backups=3
+priority=${PRIORITY}
+EOF
+    done
+    
+    log_info "✅ Configuração de ${NUM_AGENTS} agentes gerada em ${DYNAMIC_AGENTS_CONF}"
 }
 
 # ============================================================================
@@ -502,14 +579,21 @@ full_setup() {
     setup_ollama
     setup_agents
     create_agent_scripts
+    generate_supervisor_config  # Gera config dinâmica dos agentes
+    
+    # Variáveis para output
+    local NUM_AGENTS="${OPENCLAW_NUM_AGENTS:-3}"
+    local AGENT_PREFIX="${OPENCLAW_AGENT_PREFIX:-agent}"
+    local BASE_PORT="${OPENCLAW_BASE_PORT:-18790}"
     
     log_info "Setup completo finalizado com sucesso!"
     log_info ""
     log_info "Resumo:"
     log_info "  - Ollama: http://localhost:${OLLAMA_PORT}"
-    log_info "  - Planner: http://localhost:18790"
-    log_info "  - Coder:   http://localhost:18791"
-    log_info "  - Hacker:  http://localhost:18792"
+    for i in $(seq 1 $NUM_AGENTS); do
+        local PORT=$((BASE_PORT + i - 1))
+        log_info "  - ${AGENT_PREFIX}_${i}: http://localhost:${PORT}"
+    done
     log_info ""
     log_info "Persistência em: ${WORKSPACE}"
 }

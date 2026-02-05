@@ -32,21 +32,39 @@ ENV SHELL=/bin/bash \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
+# =============================================================================
+# VARIÁVEIS CONFIGURÁVEIS PELA COMUNIDADE (override via ENV no deploy)
+# =============================================================================
 
-# Variáveis de ambiente Ollama otimizadas
-ENV RP_WORKSPACE=/workspace \
-    OLLAMA_HOME=/workspace/.ollama \
-    OLLAMA_MODELS=/workspace/.ollama/models \
-    OLLAMA_HOST=0.0.0.0 \
-    OLLAMA_PORT=11434 \
-    OLLAMA_NUM_PARALLEL=4 \
-    OLLAMA_MAX_LOADED_MODELS=1 \
-    OLLAMA_FLASH_ATTENTION=1 \
+# Agentes OpenClaw
+ENV OPENCLAW_NUM_AGENTS=3 \
+    OPENCLAW_AGENT_PREFIX=agent \
+    OPENCLAW_BASE_PORT=18790 \
+    OPENCLAW_MODEL=glm-4.7-flash:latest \
+    OPENCLAW_MODEL_AUTO_PULL=true \
+    OPENCLAW_WARMUP_ENABLED=true
+
+# GPU & Performance
+ENV OLLAMA_NUM_PARALLEL=4 \
     OLLAMA_KV_CACHE_TYPE=q8_0 \
     OLLAMA_NUM_GPU=999 \
     OLLAMA_KEEP_ALIVE=-1 \
-    OLLAMA_CONTEXT_LENGTH=32768 \
+    OLLAMA_FLASH_ATTENTION=1 \
+    OLLAMA_MAX_LOADED_MODELS=1 \
+    OLLAMA_CONTEXT_LENGTH=32768
+
+# Rede & Logs
+ENV OLLAMA_HOST=0.0.0.0 \
+    OLLAMA_PORT=11434 \
     OLLAMA_DEBUG=false \
+    LOG_LEVEL=info
+
+# =============================================================================
+# VARIÁVEIS INTERNAS (não alterar)
+# =============================================================================
+ENV RP_WORKSPACE=/workspace \
+    OLLAMA_HOME=/workspace/.ollama \
+    OLLAMA_MODELS=/workspace/.ollama/models \
     OPENCLAW_HOME=/workspace/.openclaw \
     OPENCLAW_WORKSPACE=/workspace/openclaw-workspace \
     NODE_PATH=/opt/nodejs/lib/node_modules \
