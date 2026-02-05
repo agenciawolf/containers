@@ -60,5 +60,5 @@ wait_for_ollama() {
 
 wait_for_ollama || exit 1
 
-# Iniciar agente - logs vão para stdout (supervisord captura automaticamente)
-exec openclaw gateway --port "${PORT}" --config "${OPENCLAW_HOME}/config.yaml"
+# Iniciar agente - supervisord gerencia logs automaticamente
+exec openclaw gateway --port "${PORT}" --allow-unconfigured --bind loopback
