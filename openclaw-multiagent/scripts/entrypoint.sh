@@ -243,31 +243,90 @@ setup_agents() {
         local CONFIG_FILE="${AGENT_DIR}/.openclaw/openclaw.json"
         mkdir -p "${AGENT_DIR}/.openclaw"
         
-        cat > "${CONFIG_FILE}" << 'EOF'
+        # Gerar token único para este agente
+        local AGENT_TOKEN="openclaw-${AGENT}-$(head -c 16 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)"
+        
+        # Definir identidade por agente
+        local AGENT_NAME AGENT_THEME AGENT_EMOJI
+        case "${AGENT}" in
+            planner)
+                AGENT_NAME="Planner"
+                AGENT_THEME="planejamento e arquitetura de sistemas"
+                AGENT_EMOJI="🗺️"
+                ;;
+            coder)
+                AGENT_NAME="Coder"
+                AGENT_THEME="desenvolvimento e implementação de código"
+                AGENT_EMOJI="💻"
+                ;;
+            hacker)
+                AGENT_NAME="Hacker"
+                AGENT_THEME="segurança, testes e hardening"
+                AGENT_EMOJI="🔒"
+                ;;
+        esac
+        
+        # NOTA: Heredoc SEM aspas para permitir interpolação de variáveis
+        cat > "${CONFIG_FILE}" <<EOF
 {
+  "identity": {
+    "name": "${AGENT_NAME}",
+    "theme": "${AGENT_THEME}",
+    "emoji": "${AGENT_EMOJI}"
+  },
   "gateway": {
     "mode": "local",
     "port": ${PORT},
-    "bind": "loopback",
+    "bind": "0.0.0.0",
     "auth": {
-      "mode": "token"
+      "mode": "token",
+      "token": "${AGENT_TOKEN}"
     },
     "trustedProxies": ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]
   },
-  "models": {
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "agents": {
     "defaults": {
-      "provider": "ollama",
-      "model": "ollama/glm-4.7-flash"
-    },
+      "workspace": "${AGENT_DIR}/workspace",
+      "model": {
+        "primary": "ollama/glm-4.7-flash"
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
     "providers": {
       "ollama": {
         "apiKey": "ollama-local",
-        "baseUrl": "http://localhost:11434/v1"
+        "baseUrl": "http://localhost:11434/v1",
+        "api": "openai-responses",
+        "models": [
+          {
+            "id": "glm-4.7-flash",
+            "name": "GLM 4.7 Flash",
+            "reasoning": true,
+            "input": ["text"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 32768,
+            "maxTokens": 8192
+          }
+        ]
       }
     }
+  },
+  "logging": {
+    "level": "info",
+    "directory": "/workspace/logs"
   }
 }
 EOF
+        
+        # Salvar token gerado para referência
+        echo "${AGENT_TOKEN}" > "${AGENT_DIR}/.openclaw/token"
+        
+        log_info "Token gerado para ${AGENT}: ${AGENT_TOKEN:0:20}..."
         
         # Ajustar permissões para hardening (doc security: ~/.openclaw 700, openclaw.json 600)
         # Mas NFS RunPod não suporta chown/chmod, então mantemos 777

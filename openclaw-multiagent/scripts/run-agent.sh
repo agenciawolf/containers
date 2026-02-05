@@ -14,12 +14,20 @@ MAX_CPU="${AGENT_MAX_CPU:-4}"
 # HOME padrão Linux (/home/<user>) - OpenClaw espera essa estrutura
 export HOME="/home/${AGENT}"
 
+# Diretórios de dados persistentes (crítico para isolamento multi-instance)
+AGENT_DATA_DIR="/workspace/agents/${AGENT}"
+
+# OpenClaw Multi-Instance Isolation (conforme documentação oficial)
+# https://docs.openclaw.ai/gateway/configuration#multi-instance-isolation
+export OPENCLAW_CONFIG_PATH="${AGENT_DATA_DIR}/.openclaw/openclaw.json"
+export OPENCLAW_STATE_DIR="${AGENT_DATA_DIR}/.openclaw"
+
 # OpenClaw Gateway auth via env vars (conforme documentação)
 export OPENCLAW_GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-openclaw-${AGENT}-token}"
 export OPENCLAW_GATEWAY_PASSWORD="${OPENCLAW_WEB_PASSWORD:-minhasenha123}"
 
 # Dados persistentes em /workspace via symlink
-export OPENCLAW_HOME="${HOME}/.openclaw"
+export OPENCLAW_HOME="${AGENT_DATA_DIR}/.openclaw"
 export PATH="/opt/nodejs/bin:${PATH}"
 
 # Configuração de log - supervisord gerencia automaticamente
@@ -33,12 +41,17 @@ cleanup() {
 trap cleanup SIGTERM SIGINT
 
 # Verificar se config existe (JSON conforme docs OpenClaw)
-if [[ ! -f "${OPENCLAW_HOME}/openclaw.json" ]]; then
-    echo "[ERROR] Config file not found: ${OPENCLAW_HOME}/openclaw.json" >&2
+if [[ ! -f "${OPENCLAW_CONFIG_PATH}" ]]; then
+    echo "[ERROR] Config file not found: ${OPENCLAW_CONFIG_PATH}" >&2
+    echo "[INFO] Checking if entrypoint.sh created the config..." >&2
+    ls -la "${AGENT_DATA_DIR}/.openclaw/" 2>&1 >&2 || true
     exit 1
 fi
 
-cd "${HOME}"
+echo "[$(date)] Using config: ${OPENCLAW_CONFIG_PATH}" >&2
+echo "[$(date)] State dir: ${OPENCLAW_STATE_DIR}" >&2
+
+cd "${AGENT_DATA_DIR}"
 
 # Aguardar Ollama estar pronto (com retry exponencial)
 wait_for_ollama() {
@@ -65,4 +78,7 @@ wait_for_ollama() {
 wait_for_ollama || exit 1
 
 # Iniciar agente - supervisord gerencia logs automaticamente
-exec openclaw gateway --port "${PORT}" --allow-unconfigured --bind loopback --token "${OPENCLAW_GATEWAY_TOKEN}"
+# Usar --config para especificar arquivo de configuração explicitamente
+echo "[$(date)] Starting OpenClaw gateway for ${AGENT} on port ${PORT}..." >&2
+exec openclaw gateway --port "${PORT}" --allow-unconfigured --config "${OPENCLAW_CONFIG_PATH}"
+
