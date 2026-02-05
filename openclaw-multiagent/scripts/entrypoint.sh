@@ -624,14 +624,33 @@ full_setup() {
     
     log_info "Setup completo finalizado com sucesso!"
     log_info ""
-    log_info "Resumo:"
-    log_info "  - Ollama: http://localhost:${OLLAMA_PORT}"
+    log_info "Resumo de Acesso:"
+    
+    # Detecção de ambiente RunPod para URLs precisas
+    if [[ -n "${RUNPOD_POD_ID:-}" ]]; then
+        log_info "☁️ Ambiente RunPod Detectado!"
+        log_info "   Dashboard (Proxy): https://${RUNPOD_POD_ID}-${BASE_PORT}.proxy.runpod.net/"
+        log_info "   Ollama API:        https://${RUNPOD_POD_ID}-${OLLAMA_PORT}.proxy.runpod.net/"
+    else
+        log_info "🏠 Ambiente Local / Desconhecido"
+        log_info "   Dashboard:         http://localhost:${BASE_PORT}/"
+        log_info "   Ollama:            http://localhost:${OLLAMA_PORT}/"
+    fi
+
+    log_info ""
+    log_info "🤖 Agentes:"
     for i in $(seq 1 $NUM_AGENTS); do
         local PORT=$((BASE_PORT + i - 1))
-        log_info "  - ${AGENT_PREFIX}_${i}: http://localhost:${PORT}"
+        local AGENT_NAME="${AGENT_PREFIX}_${i}"
+        
+        if [[ -n "${RUNPOD_POD_ID:-}" ]]; then
+             log_info "   - ${AGENT_NAME}: https://${RUNPOD_POD_ID}-${PORT}.proxy.runpod.net/"
+        else
+             log_info "   - ${AGENT_NAME}: http://localhost:${PORT}/"
+        fi
     done
     log_info ""
-    log_info "Persistência em: ${WORKSPACE}"
+    log_info "💾 Persistência em: ${WORKSPACE}"
 }
 
 # ============================================================================
