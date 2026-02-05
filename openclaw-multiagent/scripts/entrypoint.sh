@@ -118,11 +118,13 @@ check_gpu() {
 # FUNÇÃO: Inicializar estrutura de diretórios
 # ============================================================================
 init_directories() {
-    log_step "Inicializando estrutura de diretórios..."
+    log_step "Inicializando estrutura de diretórios persistentes (NFS /workspace)..."
     
-    # Diretórios principais em /workspace (persistência NFS)
-    mkdir -p "${WORKSPACE}"/{logs,config,scripts,cache,.ollama}
-    mkdir -p "${WORKSPACE}/.cache"/{pip,npm,yarn,pnpm-store,huggingface}
+    # Diretórios principais em /workspace (persistência NFS RunPod)
+    # CRÍTICO: Tudo em /workspace sobrevive restart/redeploy do pod
+    mkdir -p "${WORKSPACE}"/{logs,config,scripts}
+    mkdir -p "${WORKSPACE}/.ollama/models"  # Modelos Ollama persistentes
+    mkdir -p "${WORKSPACE}/.cache"/{pip,npm,yarn,pnpm-store,huggingface,cuda}
     
     # Diretórios dos agentes - dados persistentes
     for agent in planner coder hacker; do
@@ -141,13 +143,14 @@ init_directories() {
     
     # CRÍTICO: Symlink de /root/.ollama para /workspace/.ollama (persistência no RunPod)
     # Ollama por padrão usa ~/.ollama que no container é /root/.ollama
+    # Com symlink, modelos ficam em /workspace/.ollama/models (NFS persistente)
     if [[ -d /root/.ollama && ! -L /root/.ollama ]]; then
         # Backup se existir conteúdo
         mv /root/.ollama /root/.ollama.bak 2>/dev/null || true
     fi
     rm -rf /root/.ollama 2>/dev/null || true
     ln -sf "${WORKSPACE}/.ollama" /root/.ollama
-    log_info "Symlink criado: /root/.ollama -> ${WORKSPACE}/.ollama"
+    log_info "📁 Modelos Ollama: /root/.ollama → ${WORKSPACE}/.ollama/models (persistente)"
     
     # Symlinks de /home/<user> para /workspace/agents/<user> (OpenClaw compatibilidade)
     for agent in planner coder hacker; do
@@ -166,9 +169,11 @@ init_directories() {
         
         # Ajustar permissões do home
         chmod 755 "${USER_HOME}"
+        
+        log_info "📁 Agent ${agent}: ${USER_HOME}/.openclaw → ${AGENT_DATA}/.openclaw (persistente)"
     done
     
-    log_info "Estrutura de diretórios criada com sucesso (symlinks para persistência)"
+    log_info "✅ Estrutura de diretórios persistentes configurada"
 }
 
 # ============================================================================
