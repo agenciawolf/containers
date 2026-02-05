@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 # Configurações
 $DOCKER_USERNAME = if ($env:DOCKER_USERNAME) { $env:DOCKER_USERNAME } else { "agenciawolf" }
 $IMAGE_NAME = "$DOCKER_USERNAME/openclaw-multiagent"
-$TAG = if ($args[0]) { $args[0] } else { "2.0" }
+$TAG = if ($args[0]) { $args[0] } else { "2.2" }
 $FULL_IMAGE = "$IMAGE_NAME`:$TAG"
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -58,15 +58,15 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "✅ Build completo" -ForegroundColor Green
 
-# Tag adicional como 2.0 (se não for 2.0)
-if ($TAG -ne "2.0") {
+# Tag adicional como 2.2 (se não for 2.2)
+if ($TAG -ne "2.2") {
     Write-Host ""
-    Write-Host "[3/5] Criando tag '2.0' também..." -ForegroundColor Yellow
-    docker tag "$FULL_IMAGE" "$IMAGE_NAME`:2.0"
-    Write-Host "✅ Tag 2.0 criada" -ForegroundColor Green
+    Write-Host "[3/5] Criando tag '2.2' também..." -ForegroundColor Yellow
+    docker tag "$FULL_IMAGE" "$IMAGE_NAME`:2.2"
+    Write-Host "✅ Tag 2.2 criada" -ForegroundColor Green
 } else {
     Write-Host ""
-    Write-Host "[3/5] Pulando tag adicional (já é 2.0)" -ForegroundColor Gray
+    Write-Host "[3/5] Pulando tag adicional (já é 2.2)" -ForegroundColor Gray
 }
 
 # Push da imagem
@@ -76,9 +76,9 @@ Write-Host "Upload: $FULL_IMAGE" -ForegroundColor Gray
 try {
     docker push "$FULL_IMAGE"
     
-    if ($TAG -ne "2.0") {
-        Write-Host "Upload: $IMAGE_NAME`:2.0" -ForegroundColor Gray
-        docker push "$IMAGE_NAME`:2.0"
+    if ($TAG -ne "2.2") {
+        Write-Host "Upload: $IMAGE_NAME`:2.2" -ForegroundColor Gray
+        docker push "$IMAGE_NAME`:2.2"
     }
     Write-Host "✅ Push completo" -ForegroundColor Green
 } catch {

@@ -441,7 +441,7 @@ setup_agents() {
              if [ $? -eq 0 ] && [ -s "${CONFIG_FILE}.tmp" ]; then
                 mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"
                 log_info "✅ Configurações migradas e atualizadas com sucesso"
-                log_info "🔍 [DEBUG] Conteúdo do ${CONFIG_FILE}:"
+                log_info " [DEBUG] Conteúdo do ${CONFIG_FILE}:"
                 cat "${CONFIG_FILE}"
             else
                 log_error "Falha crítica ao atualizar JSON. Criando backup e gerando novo."

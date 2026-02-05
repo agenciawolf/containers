@@ -87,7 +87,7 @@ RUN apt-get update --yes && \
     apt-get upgrade --yes && \
     apt-get install --yes --no-install-recommends \
     # Build essentials (mínimo necessário)
-    build-essential ca-certificates cmake curl git wget unzip zip zstd \
+    build-essential ca-certificates cmake curl git wget unzip zip zstd dos2unix \
     # Python otimizado
     python3.10 python3.10-venv python3-pip \
     # Segurança: apenas ferramentas essenciais
@@ -142,6 +142,8 @@ RUN mkdir -p /var/log/supervisor /var/run /etc/supervisor/conf.d
 
 # Copiar configurações e scripts
 COPY --chmod=755 scripts/*.sh /opt/scripts/
+RUN dos2unix /opt/scripts/*.sh
+
 COPY config/*.yaml /opt/config/
 COPY config/supervisord.conf /etc/supervisor/conf.d/
 
@@ -155,6 +157,7 @@ EXPOSE 11434 18790-18799 22
 WORKDIR /workspace
 
 COPY --chmod=755 scripts/entrypoint.sh /entrypoint.sh
+RUN dos2unix /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
