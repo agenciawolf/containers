@@ -424,17 +424,23 @@ setup_agents() {
     "dmScope": "per-channel-peer"
   },
   "agents": {
-    "defaults": {
-      "identity": {
-        "name": "${AGENT_NAME}",
-        "theme": "${AGENT_THEME}",
-        "emoji": "${AGENT_EMOJI}"
-      },
-      "workspace": "${AGENT_DIR}/workspace",
-      "model": {
-        "primary": "ollama/${MODEL}"
+    "list": [
+      {
+        "identity": {
+          "name": "${AGENT_NAME}",
+          "theme": "${AGENT_THEME}",
+          "emoji": "${AGENT_EMOJI}"
+        },
+        "workspace": "${AGENT_DIR}/workspace",
+        "model": {
+          "primary": "ollama/${MODEL}"
+        },
+        "execution": {
+          "timeout": "300s",
+          "maxIterations": 50
+        }
       }
-    }
+    ]
   },
   "models": {
     "mode": "merge",
