@@ -499,6 +499,16 @@ setup_agents() {
     "dmScope": "per-channel-peer"
   },
   "agents": {
+    "defaults": {
+      "model": {
+        "primary": "ollama/${MODEL}"
+      },
+      "models": {
+        "ollama/${MODEL}": {
+          "alias": "${MODEL}"
+        }
+      }
+    },
     "list": [
       {
         "id": "${AGENT}",
@@ -507,10 +517,7 @@ setup_agents() {
           "theme": "${AGENT_THEME}",
           "emoji": "${AGENT_EMOJI}"
         },
-        "workspace": "${AGENT_DIR}/workspace",
-        "model": {
-          "primary": "ollama/${MODEL}"
-        }
+        "workspace": "${AGENT_DIR}/workspace"
       }
     ]
   },
