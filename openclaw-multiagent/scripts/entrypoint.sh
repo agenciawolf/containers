@@ -381,7 +381,7 @@ setup_agents() {
             # Tenta pegar do ENV ou do Metadata
             if [[ -z "${RUNPOD_POD_ID}" ]]; then
                 # Tenta pegar do RunPod Metadata se estivesse vazio
-                RUNPOD_POD_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "")
+                RUNPOD_POD_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null | tr -d '\n')
             fi
             
             if [[ -n "${RUNPOD_POD_ID}" ]]; then
@@ -441,6 +441,8 @@ setup_agents() {
              if [ $? -eq 0 ] && [ -s "${CONFIG_FILE}.tmp" ]; then
                 mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"
                 log_info "✅ Configurações migradas e atualizadas com sucesso"
+                log_info "🔍 [DEBUG] Conteúdo do ${CONFIG_FILE}:"
+                cat "${CONFIG_FILE}"
             else
                 log_error "Falha crítica ao atualizar JSON. Criando backup e gerando novo."
                 mv "${CONFIG_FILE}" "${CONFIG_FILE}.broken"
@@ -453,7 +455,7 @@ setup_agents() {
         
         # Tenta pegar do ENV ou do Metadata para nova config
         if [[ -z "${RUNPOD_POD_ID}" ]]; then
-            RUNPOD_POD_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "")
+            RUNPOD_POD_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null | tr -d '\n')
         fi
 
         log_info "📝 Criando nova config para ${AGENT}..."
@@ -532,7 +534,11 @@ setup_agents() {
   }
 }
 EOF
+        # DEBUG: Imprimir a config gerada para verificação
+        log_info "🔍 [DEBUG] Conteúdo do ${CONFIG_FILE}:"
+        cat "${CONFIG_FILE}"
         
+        # Gerar arquivo de supervisord para este agente
         echo "${AGENT_TOKEN}" > "${AGENT_DIR}/.openclaw/token"
         log_info "Token gerado para ${AGENT}: ${AGENT_TOKEN:0:20}..."
         
