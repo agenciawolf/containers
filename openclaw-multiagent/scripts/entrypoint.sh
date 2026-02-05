@@ -371,19 +371,51 @@ setup_agents() {
             
             # ATUALIZAÇÃO DINÂMICA SEGURA
             log_info "🔄 Atualizando configurações críticas..."
+
+            # MICRO-CIRURGIA NO JSON:
+            # 1. Migrar 'agents.defaults.identity' para 'agents.list[0].identity' (Fix Schema)
+            # 2. Atualizar modelo, portas, auth e controlUi
             
-            # Apenas atualiza o que é garantido funcionar nessa versão
-            if jq --arg model "$MODEL" \
-                  --arg port "$PORT" \
-               '.llm.model = $model | 
-                .gateway.port = ($port | tonumber) |
-                .gateway.controlUi.enabled = true |
-                .gateway.controlUi.allowInsecureAuth = true |
-                .gateway.auth.mode = "password"' \
-               "${CONFIG_FILE}" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"; then
-                log_info "✅ Configurações atualizadas"
+            # Script JQ complexo para migração e update em uma passada
+            jq --arg model "$MODEL" \
+               --arg port "$PORT" \
+               '
+               # 1. MIGRAÇÃO DE SCHEMA (defaults -> list)
+               if .agents.defaults.identity then
+                 .agents.list = [
+                   (.agents.defaults + 
+                    {
+                      "identity": .agents.defaults.identity,
+                      "workspace": (.agents.defaults.workspace // "/workspace/agents/'"${AGENT}"'/workspace"),
+                      "model": (.agents.defaults.model // {"primary": "ollama/" + $model})
+                    }
+                   )
+                 ] |
+                 del(.agents.defaults)
+               else . end |
+
+               # 2. ATUALIZAÇÃO DE VALORES
+               .llm.model = $model | 
+               .gateway.port = ($port | tonumber) |
+               .gateway.controlUi.enabled = true |
+               .gateway.controlUi.allowInsecureAuth = true |
+               .gateway.auth.mode = "password" |
+               
+               # Se agents.list existe (pós-migração ou nativo), atualiza o modelo lá também
+               if .agents.list then
+                 .agents.list[0].model.primary = "ollama/" + $model
+               else . end
+               ' \
+               "${CONFIG_FILE}" > "${CONFIG_FILE}.tmp"
+
+             if [ $? -eq 0 ] && [ -s "${CONFIG_FILE}.tmp" ]; then
+                mv "${CONFIG_FILE}.tmp" "${CONFIG_FILE}"
+                log_info "✅ Configurações migradas e atualizadas com sucesso"
             else
-                log_error "Falha ao atualizar JSON"
+                log_error "Falha crítica ao atualizar JSON. Criando backup e gerando novo."
+                mv "${CONFIG_FILE}" "${CONFIG_FILE}.broken"
+                # Continua para o bloco de criação de nova config
+                return 1 2>/dev/null || continue
             fi
             
             continue
