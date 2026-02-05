@@ -469,13 +469,13 @@ setup_agents() {
         # ======================================================================
         # SCHEMA CORRIGIDO - REMOVIDOS CAMPOS DEPRECIADOS/INVÁLIDOS
         # Construir string de origens permitidas
-        # TENTATIVA AGRESSIVA: Apenas a origem exata do RunPod se existir, ou * se não
+        # FIX: SEMPRE manter wildcard "*" + origem específica do RunPod
         local ALLOWED_ORIGINS_JSON="\"*\""
         if [[ -n "${RUNPOD_POD_ID}" ]]; then
             local RP_URL="https://${RUNPOD_POD_ID}-${PORT}.proxy.runpod.net"
-            # Remove o wildcard para forçar validação estrita na URL correta
-            ALLOWED_ORIGINS_JSON="\"${RP_URL}\""
-            log_info "🌍 Origem RunPod detectada: ${RP_URL} (Modo Estrito)"
+            # Manter wildcard + URL específica para máxima compatibilidade
+            ALLOWED_ORIGINS_JSON="\"*\", \"${RP_URL}\""
+            log_info "🌍 Origem RunPod detectada: ${RP_URL}"
         fi
         
         log_info "📝 Configurando allowedOrigins: [${ALLOWED_ORIGINS_JSON}]"
@@ -493,7 +493,7 @@ setup_agents() {
     "auth": {
       "mode": "password"
     },
-    "trustedProxies": ["0.0.0.0/0"]
+    "trustedProxies": ["10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]
   },
   "session": {
     "dmScope": "per-channel-peer"
