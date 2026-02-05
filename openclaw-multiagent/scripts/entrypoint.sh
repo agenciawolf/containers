@@ -421,6 +421,7 @@ setup_agents() {
                else
                  .gateway.controlUi.allowedOrigins = ["*"]
                end |
+               .gateway.trustedProxies = ["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"] |
                .gateway.auth.mode = "password" |
                
                # Se agents.list existe, atualiza o modelo lá também e remove execution se existir
