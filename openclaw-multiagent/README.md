@@ -1,7 +1,18 @@
-# 🤖 OpenClaw Multi-Agent Container
+# 🤖 OpenClaw Multi-Agent Container (RunPod Edition)
 
-Container Docker otimizado para rodar **múltiplos agentes OpenClaw** com **Ollama** em GPUs NVIDIA.  
-Especialmente configurado para **RunPod Community Cloud**.
+> **O Solucionador Autônomo Definitivo para GPUs Cloud**
+
+Este projeto é um container **all-in-one** projetado para implantar enxames de agentes **OpenClaw** rodando 100% locais via **Ollama**, otimizado especificamente para a infraestrutura da **RunPod Community Cloud**.
+
+### 🎯 Objetivo do Projeto
+Permitir que desenvolvedores e pesquisadores rodem **múltiplos agentes autônomos simultâneos** (até 10+) em uma única GPU potente (como RTX 3090/4090 ou A6000), compartilhando recursos de forma inteligente e eficiente.
+
+### ✨ Principais Recursos
+- **🧠 Múltiplos Cérebros, Uma GPU:** Roda N instâncias do OpenClaw isoladas, compartilhando o mesmo backend Ollama.
+- **⚡ Otimizado para RunPod:** Configuração zero-touch com reconhecimento automático de IP e portas.
+- **📦 Stack Completa:** Inclui OpenClaw (Frontend/Backend) + Ollama Server + Modelos (GLM-4 / Qwen) pré-configurados.
+- **💾 Persistência Inteligente:** Cache de modelos e memórias de longo prazo sobrevivem a reinicializações do Pod.
+- **🔧 Configurável via ENV:** Controle total sobre comportamento do agente, parâmetros de modelo e consumo de VRAM sem tocar em arquivos de config.
 
 ---
 
