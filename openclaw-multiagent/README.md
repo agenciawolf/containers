@@ -13,6 +13,12 @@ blacktech/openclaw-multiagent:latest
 
 # Variável OBRIGATÓRIA
 OPENCLAW_WEB_PASSWORD=sua_senha_forte
+
+# Portas HTTP OBRIGATÓRIAS (expor no RunPod)
+# 18790 - Agente 1 (sempre)
+# 18791 - Agente 2 (se NUM_AGENTS >= 2)
+# 18792 - Agente 3 (se NUM_AGENTS >= 3)
+# ... até 18799 (máx 10 agentes)
 ```
 
 **Porta padrão:** `18790` (primeiro agente)
