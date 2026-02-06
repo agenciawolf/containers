@@ -40,6 +40,37 @@ OPENCLAW_WEB_PASSWORD=sua_senha_forte
 6. [Segurança](#-segurança)
 7. [Troubleshooting](#-troubleshooting)
 
+# =============================================================================
+# Arquitetura: Quem Controla O Quê?
+# =============================================================================
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     OLLAMA SERVER                            │
+│  ENV VARS controlam o SERVIDOR:                              │
+│  • OLLAMA_NUM_PARALLEL (requests simultâneos)                │
+│  • OLLAMA_MAX_LOADED_MODELS (modelos na memória)             │
+│  • OLLAMA_KV_CACHE_TYPE (tipo de cache)                      │
+│  • OLLAMA_FLASH_ATTENTION (otimização GPU)                   │
+│  • OLLAMA_CONTEXT_LENGTH (default se não especificado)       │
+│  • OLLAMA_NUM_GPU (layers na GPU)                            │
+│  • OLLAMA_MAX_QUEUE (fila de requests)                       │
+│  • OLLAMA_DEBUG (nível de log)                               │
+└─────────────────────────────────────────────────────────────┘
+                            ▲
+                            │ API Request com params
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│                      OPENCLAW                                │
+│  PARAMS são enviados na REQUEST:                             │
+│  • temperature (criatividade)                                │
+│  • top_p (nucleus sampling)                                  │
+│  • repeat_penalty (repetição)                                │
+│  • num_ctx (context window desta request)                    │
+│  • think: true/false (modo reasoning)                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## ⚙️ Variáveis de Ambiente
@@ -197,13 +228,12 @@ OLLAMA_NUM_PARALLEL=6
 
 ## 🌐 Portas e Acesso
 
-| Porta | Serviço |
-|-------|---------|
-| `18790` | Agente 1 (Dashboard Web) |
-| `18791` | Agente 2 (se `NUM_AGENTS >= 2`) |
-| `18792` | Agente 3 (se `NUM_AGENTS >= 3`) |
-| ... | ... |
-| `11434` | Ollama API (opcional) |
+| Porta | Serviço | Expor Pública? | Descrição |
+|-------|---------|----------------|-----------|
+| `18790` | Agente 1 | **SIM (Obrigatório)** | Dashboard Web do Agente 1 |
+| `18791` | Agente 2 | **SIM (Obrigatório)** | Se `NUM_AGENTS >= 2` |
+| `18792` | Agente 3 | **SIM (Obrigatório)** | Se `NUM_AGENTS >= 3` |
+| `11434` | Ollama API | **NÃO (Opcional)** | Use apenas se precisar acessar a API direta (debug). O OpenClaw usa essa porta internamente via `localhost`. |
 
 ### Exemplo com 5 Agentes
 
@@ -213,28 +243,33 @@ OPENCLAW_WEB_PASSWORD=minha_senha_segura
 ```
 
 Resultado:
-- `agent_1` → porta **18790**
-- `agent_2` → porta **18791**
-- `agent_3` → porta **18792**
-- `agent_4` → porta **18793**
-- `agent_5` → porta **18794**
+- `agent_1` → porta **18790** (Expor TCP Port)
+- `agent_2` → porta **18791** (Expor TCP Port)
+- ...
+- `agent_5` → porta **18794** (Expor TCP Port)
 
 ---
 
-## 💾 Persistência de Dados
+## 💾 Persistência de Dados (Volume RunPod)
 
-Monte o volume `/workspace` (mínimo 50GB) para persistir:
+Para não perder suas memórias, conversas e modelos baixados ao reiniciar o pod, você **DEVE** configurar o Volume Path corretamente.
 
+1. No Template do RunPod, configure **Volume Mount Path**: `/workspace`
+2. Certifique-se de que seu Container Disk Size é suficiente (mínimo 50GB recomendado).
+
+**O que é salvo em `/workspace`:**
 ```
 /workspace/
-├── .ollama/models/      # Modelos Ollama (~20-40GB)
-├── agents/              # Dados de cada agente
+├── .ollama/models/      # Modelos LLM baixados (evita download a cada restart)
+├── agents/              # 🧠 CÉREBRO DOS AGENTES (Memórias, sessões, configs)
 │   └── agent_1/
-│       ├── .openclaw/   # Config e memória
-│       └── workspace/   # Diretório de trabalho
-├── logs/                # Logs de todos os serviços
-└── .cache/              # Caches (npm, pip, cuda)
+│       ├── .openclaw/   # Configurações locais do agente
+│       └── workspace/   # Arquivos gerados pelo agente
+├── logs/                # Histórico de logs para debug
+└── .cache/              # Caches de sistema (npm, pip, cuda)
 ```
+
+> ⚠️ **Atenção:** Se você não montar o volume em `/workspace`, todos os dados serão perdidos ao desligar o Pod!
 
 ---
 
