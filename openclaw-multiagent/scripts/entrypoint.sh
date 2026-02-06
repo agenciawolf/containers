@@ -2,7 +2,7 @@
 # Script de inicialização otimizado para OpenClaw Multi-Agent no RunPod
 # Inclui: retry exponencial, circuit breaker, health checks avançados
 
-set -euo pipefail
+set -eo pipefail
 
 # Configurações de retry
 MAX_RETRIES=5
