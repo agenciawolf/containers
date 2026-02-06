@@ -531,6 +531,21 @@ setup_agents() {
             "top_p": 0.95
           }
         }
+      },
+      "contextPruning": {
+        "mode": "adaptive",
+        "keepLastAssistants": 3,
+        "softTrimRatio": 0.3,
+        "hardClearRatio": 0.5,
+        "minPrunableToolChars": 50000
+      },
+      "compaction": {
+        "mode": "safeguard",
+        "reserveTokensFloor": 24000,
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 6000
+        }
       }
     },
     "list": [
