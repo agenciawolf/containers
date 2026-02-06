@@ -510,7 +510,7 @@ setup_agents() {
   },
   "agents": {
     "defaults": {
-      "thinkingDefault": "low",
+      "thinkingDefault": "on",
       "verboseDefault": "off",
       "elevatedDefault": "on",
       "timeoutSeconds": 600,
@@ -523,10 +523,6 @@ setup_agents() {
         "ollama/${MODEL}": {
           "alias": "${MODEL}",
           "params": {
-            "thinking": {
-              "type": "enabled",
-              "clear_thinking": false
-            },
             "temperature": 0.7,
             "top_p": 0.95
           }
