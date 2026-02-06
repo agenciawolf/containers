@@ -515,7 +515,7 @@ setup_agents() {
       "elevatedDefault": "on",
       "timeoutSeconds": 600,
       "maxConcurrent": 3,
-      "contextTokens": 128000,
+      "contextTokens": 131072,
       "model": {
         "primary": "ollama/${MODEL}"
       },
@@ -524,7 +524,9 @@ setup_agents() {
           "alias": "${MODEL}",
           "params": {
             "temperature": 0.7,
-            "top_p": 0.95
+            "top_p": 0.95,
+            "repeat_penalty": 1.0,
+            "num_ctx": 131072
           }
         }
       },
@@ -571,7 +573,7 @@ setup_agents() {
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
             "contextWindow": 131072,
-            "maxTokens": 16384
+            "maxTokens": 32768
           }
         ]
       }
