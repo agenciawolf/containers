@@ -603,9 +603,9 @@ setup_agents() {
   }
 }
 EOF
-        # DEBUG: Imprimir a config gerada para verificação
-        log_info "🔍 [DEBUG] Conteúdo do ${CONFIG_FILE}:"
-        cat "${CONFIG_FILE}"
+        # DEBUG: Imprimir a config gerada (SANITIZADA) para verificação
+        log_info "🔍 [DEBUG] Conteúdo do ${CONFIG_FILE} (Sanitizado):"
+        cat "${CONFIG_FILE}" | sed 's/"password": ".*"/"password": "***"/'
         
         # Gerar arquivo de supervisord para este agente
         echo "${AGENT_TOKEN}" > "${AGENT_DIR}/.openclaw/token"
