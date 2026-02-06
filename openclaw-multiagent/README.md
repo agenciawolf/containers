@@ -284,7 +284,34 @@ Para não perder suas memórias, conversas e modelos baixados ao reiniciar o pod
 
 ---
 
-## 🔒 Segurança
+## 🔒 Segurança e Arquitetura de Isolamento
+
+Para garantir que um agente não interfira nas memórias ou arquivos de outro, implementamos uma arquitetura de isolamento rigorosa:
+
+### 1. 🧠 Memórias e Vector DB Isolados
+Cada agente possui seu próprio banco de dados vetorial (LanceDB/Chroma) localizado em seu diretório privado.
+- **Benefício:** O `Agent 1` (ex: Coder) nunca misturará conhecimento com o `Agent 2` (ex: Writer).
+- **Caminho:** `/workspace/agents/agent_{N}/.openclaw/memory`
+
+### 2. 📂 Workspaces Separados
+Cada agente opera em um diretório de trabalho exclusivo (`CWD`).
+- **Benefício:** Arquivos criados, código gerado e downloads ficam segregados.
+- **Estrutura:**
+  ```text
+  /workspace/agents/
+  ├── agent_1/ (Porta 18790) 🔒 Privado
+  ├── agent_2/ (Porta 18791) 🔒 Privado
+  └── ...
+  ```
+
+### 3. 🔑 Tokens de Autenticação Únicos
+O sistema gera automaticamente um **Token de Serviço** único para cada agente na inicialização.
+- Isso previne que scripts maliciosos em um agente controlem outro agente via API.
+- Tokens salvos em: `/workspace/agents/agent_{N}/.openclaw/token`
+
+---
+
+## 🧱 Segurança
 
 - ✅ **Senha obrigatória** - Sem fallback inseguro
 - ✅ **Tokens únicos** - Cada agente tem seu token
