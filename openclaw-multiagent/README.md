@@ -282,6 +282,12 @@ Para não perder suas memórias, conversas e modelos baixados ao reiniciar o pod
 
 > ⚠️ **Atenção:** Se você não montar o volume em `/workspace`, todos os dados serão perdidos ao desligar o Pod!
 
+### 💡 Dica Pro: RunPod Network Volumes (NFS)
+Se você usa a **Secure Cloud**, recomendamos fortemente usar um **Network Volume**.
+1. Crie um Network Volume na sua região.
+2. Monte-o em `/workspace` no seu template.
+3. **Benefício:** Você pode destruir o Pod, criar outro (até com GPU diferente), e **todas as suas memórias, agentes e histórico estarão lá intactos**. É a forma definitiva de persistência.
+
 ---
 
 ## 🔒 Segurança e Arquitetura de Isolamento
