@@ -34,6 +34,18 @@ OPENCLAW_WEB_PASSWORD=sua_senha_forte
 
 **Porta padrão:** `18790` (primeiro agente)
 
+### 🔓 Como Acessar (Primeiro Acesso)
+
+Após o container iniciar (pode levar ~30s para carregar os modelos):
+
+1. Vá no painel do RunPod e clique em **Connect** > **Expose Port (18790)** ou copie a URL do Proxy.
+2. A URL será algo como: `https://{POD_ID}-18790.proxy.runpod.net/overview`
+3. Você verá uma tela de login.
+4. **Input:** `Password (not stored)`
+5. **Senha:** Use a mesma definida na ENV `OPENCLAW_WEB_PASSWORD`.
+
+> 💡 **Dica:** O OpenClaw usa essa senha apenas para autenticar a sessão local no browser.
+
 ---
 
 ## 📋 Índice
