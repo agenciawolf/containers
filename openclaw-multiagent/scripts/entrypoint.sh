@@ -477,6 +477,25 @@ setup_agents() {
         local AGENT_EMOJI="🤖"
         
         # ======================================================================
+        # ENV VARS DINÂMICAS (com defaults)
+        # ======================================================================
+        local OC_TEMPERATURE="${OPENCLAW_TEMPERATURE:-0.7}"
+        local OC_TOP_P="${OPENCLAW_TOP_P:-0.95}"
+        local OC_REPEAT_PENALTY="${OPENCLAW_REPEAT_PENALTY:-1.0}"
+        local OC_NUM_CTX="${OPENCLAW_NUM_CTX:-131072}"
+        local OC_MAX_TOKENS="${OPENCLAW_MAX_TOKENS:-32768}"
+        local OC_THINKING_DEFAULT="${OPENCLAW_THINKING_DEFAULT:-low}"
+        local OC_VERBOSE_DEFAULT="${OPENCLAW_VERBOSE_DEFAULT:-off}"
+        local OC_ELEVATED_DEFAULT="${OPENCLAW_ELEVATED_DEFAULT:-on}"
+        local OC_CONTEXT_TOKENS="${OPENCLAW_CONTEXT_TOKENS:-131072}"
+        local OC_TIMEOUT_SECONDS="${OPENCLAW_TIMEOUT_SECONDS:-600}"
+        local OC_MAX_CONCURRENT="${OPENCLAW_MAX_CONCURRENT:-3}"
+        local OC_PRUNING_MODE="${OPENCLAW_PRUNING_MODE:-adaptive}"
+        local OC_KEEP_LAST_ASSISTANTS="${OPENCLAW_KEEP_LAST_ASSISTANTS:-3}"
+        local OC_SOFT_TRIM_RATIO="${OPENCLAW_SOFT_TRIM_RATIO:-0.3}"
+        local OC_HARD_CLEAR_RATIO="${OPENCLAW_HARD_CLEAR_RATIO:-0.5}"
+        
+        # ======================================================================
         # SCHEMA CORRIGIDO - REMOVIDOS CAMPOS DEPRECIADOS/INVÁLIDOS
         # Construir string de origens permitidas
         # FIX: SEMPRE manter wildcard "*" + origem específica do RunPod
@@ -510,12 +529,12 @@ setup_agents() {
   },
   "agents": {
     "defaults": {
-      "thinkingDefault": "${OPENCLAW_THINKING_DEFAULT:-on}",
-      "verboseDefault": "${OPENCLAW_VERBOSE_DEFAULT:-off}",
-      "elevatedDefault": "${OPENCLAW_ELEVATED_DEFAULT:-on}",
-      "timeoutSeconds": ${OPENCLAW_TIMEOUT_SECONDS:-600},
-      "maxConcurrent": ${OPENCLAW_MAX_CONCURRENT:-3},
-      "contextTokens": ${OPENCLAW_CONTEXT_TOKENS:-131072},
+      "thinkingDefault": "${OC_THINKING_DEFAULT}",
+      "verboseDefault": "${OC_VERBOSE_DEFAULT}",
+      "elevatedDefault": "${OC_ELEVATED_DEFAULT}",
+      "timeoutSeconds": ${OC_TIMEOUT_SECONDS},
+      "maxConcurrent": ${OC_MAX_CONCURRENT},
+      "contextTokens": ${OC_CONTEXT_TOKENS},
       "model": {
         "primary": "ollama/${MODEL}"
       },
@@ -523,18 +542,18 @@ setup_agents() {
         "ollama/${MODEL}": {
           "alias": "${MODEL}",
           "params": {
-            "temperature": ${OPENCLAW_TEMPERATURE:-0.7},
-            "top_p": ${OPENCLAW_TOP_P:-0.95},
-            "repeat_penalty": ${OPENCLAW_REPEAT_PENALTY:-1.0},
-            "num_ctx": ${OPENCLAW_NUM_CTX:-131072}
+            "temperature": ${OC_TEMPERATURE},
+            "top_p": ${OC_TOP_P},
+            "repeat_penalty": ${OC_REPEAT_PENALTY},
+            "num_ctx": ${OC_NUM_CTX}
           }
         }
       },
       "contextPruning": {
-        "mode": "${OPENCLAW_PRUNING_MODE:-adaptive}",
-        "keepLastAssistants": ${OPENCLAW_KEEP_LAST_ASSISTANTS:-3},
-        "softTrimRatio": ${OPENCLAW_SOFT_TRIM_RATIO:-0.3},
-        "hardClearRatio": ${OPENCLAW_HARD_CLEAR_RATIO:-0.5},
+        "mode": "${OC_PRUNING_MODE}",
+        "keepLastAssistants": ${OC_KEEP_LAST_ASSISTANTS},
+        "softTrimRatio": ${OC_SOFT_TRIM_RATIO},
+        "hardClearRatio": ${OC_HARD_CLEAR_RATIO},
         "minPrunableToolChars": 50000
       },
       "compaction": {
@@ -572,8 +591,8 @@ setup_agents() {
             "reasoning": true,
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-            "contextWindow": ${OPENCLAW_NUM_CTX:-131072},
-            "maxTokens": ${OPENCLAW_MAX_TOKENS:-32768}
+            "contextWindow": ${OC_NUM_CTX},
+            "maxTokens": ${OC_MAX_TOKENS}
           }
         ]
       }

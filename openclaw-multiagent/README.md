@@ -72,7 +72,7 @@ OPENCLAW_WEB_PASSWORD=sua_senha_forte
 
 | Variável | Default | Opções | Descrição |
 |----------|---------|--------|-----------|
-| `OPENCLAW_THINKING_DEFAULT` | `on` | `on` / `off` | 🧠 Ativar raciocínio (reasoning) |
+| `OPENCLAW_THINKING_DEFAULT` | `low` | `low` / `on` / `off` | 🧠 Modo de raciocínio (reasoning) |
 | `OPENCLAW_VERBOSE_DEFAULT` | `off` | `on` / `off` | Modo verbose |
 | `OPENCLAW_ELEVATED_DEFAULT` | `on` | `on` / `off` | Permissões elevadas |
 
