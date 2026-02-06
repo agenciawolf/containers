@@ -24,6 +24,16 @@ AGENTS_DIR="${WORKSPACE}/agents"
 OLLAMA_PORT=11434
 CIRCUIT_BREAKER_FILE="${WORKSPACE}/.circuit-breaker"
 
+# ============================================================================
+# OTIMIZAÇÕES OLLAMA (Máxima Performance)
+# ============================================================================
+export OLLAMA_FLASH_ATTENTION=1         # Flash Attention (+30-50% velocidade)
+export OLLAMA_KV_CACHE_TYPE=q8_0        # KV Cache 8-bit (-50% VRAM)
+export OLLAMA_NUM_PARALLEL=4            # Requisições paralelas
+export OLLAMA_MAX_LOADED_MODELS=1       # 1 modelo = máx performance
+export OLLAMA_HOST=0.0.0.0              # Aceitar conexões externas
+export OLLAMA_MODELS="${WORKSPACE}/.ollama/models"  # Modelos persistentes
+
 # Mascarar dados sensíveis (tokens, senhas)
 mask_sensitive() {
     local msg="$1"
@@ -500,7 +510,7 @@ setup_agents() {
   },
   "agents": {
     "defaults": {
-      "thinkingDefault": "off",
+      "thinkingDefault": "on",
       "model": {
         "primary": "ollama/${MODEL}"
       },
@@ -536,8 +546,8 @@ setup_agents() {
             "reasoning": true,
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-            "contextWindow": 32768,
-            "maxTokens": 81920
+            "contextWindow": 131072,
+            "maxTokens": 16384
           }
         ]
       }
