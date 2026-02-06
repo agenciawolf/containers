@@ -1,199 +1,199 @@
 # 🤖 OpenClaw Multi-Agent Container (RunPod Edition)
 
-> **O Solucionador Autônomo Definitivo para GPUs Cloud**
+> **The Ultimate Autonomous Solver for Cloud GPUs**
 
-Este projeto é um container **all-in-one** projetado para implantar enxames de agentes **OpenClaw** rodando 100% locais via **Ollama**, otimizado especificamente para a infraestrutura da **RunPod Community Cloud**.
+This project is an **all-in-one** container designed to deploy swarms of **OpenClaw** agents running 100% locally via **Ollama**, specifically optimized for the **RunPod Community Cloud** infrastructure.
 
-### 🎯 Objetivo do Projeto
-Permitir que desenvolvedores e pesquisadores rodem **múltiplos agentes autônomos simultâneos** (até 10+) em uma única GPU potente (como RTX 3090/4090 ou A6000), compartilhando recursos de forma inteligente e eficiente.
+### 🎯 Project Goal
+To allow developers and researchers to run **multiple simultaneous autonomous agents** (up to 10+) on a single powerful GPU (such as RTX 3090/4090 or A6000), sharing resources intelligently and efficiently.
 
-### ✨ Principais Recursos
-- **🧠 Múltiplos Cérebros, Uma GPU:** Roda N instâncias do OpenClaw isoladas, compartilhando o mesmo backend Ollama.
-- **⚡ Otimizado para RunPod:** Configuração zero-touch com reconhecimento automático de IP e portas.
-- **📦 Stack Completa:** Inclui OpenClaw (Frontend/Backend) + Ollama Server + Modelos (GLM-4 / Qwen) pré-configurados.
-- **💾 Persistência Inteligente:** Cache de modelos e memórias de longo prazo sobrevivem a reinicializações do Pod.
-- **🔧 Configurável via ENV:** Controle total sobre comportamento do agente, parâmetros de modelo e consumo de VRAM sem tocar em arquivos de config.
+### ✨ Key Features
+- **🧠 Multiple Brains, One GPU:** Runs N isolated OpenClaw instances, sharing the same Ollama backend.
+- **⚡ Optimized for RunPod:** Zero-touch configuration with automatic IP and port recognition.
+- **📦 Complete Stack:** Includes OpenClaw (Frontend/Backend) + Ollama Server + Pre-configured Models (GLM-4 / Qwen).
+- **💾 Smart Persistence:** Model cache and long-term memories survive Pod restarts.
+- **🔧 Configurable via ENV:** Full control over agent behavior, model parameters, and VRAM consumption without touching config files.
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# RunPod - Use a imagem direto
+# RunPod - Use the image directly
 blacktech/openclaw-multiagent:latest
 
-# Variável OBRIGATÓRIA
-OPENCLAW_WEB_PASSWORD=sua_senha_forte
+# MANDATORY Variable
+OPENCLAW_WEB_PASSWORD=your_strong_password
 
-# Portas HTTP OBRIGATÓRIAS (expor no RunPod)
-# 18790 - Agente 1 (sempre)
-# 18791 - Agente 2 (se NUM_AGENTS >= 2)
-# 18792 - Agente 3 (se NUM_AGENTS >= 3)
-# ... até 18799 (máx 10 agentes)
+# MANDATORY HTTP Ports (expose in RunPod)
+# 18790 - Agent 1 (always)
+# 18791 - Agent 2 (if NUM_AGENTS >= 2)
+# 18792 - Agent 3 (if NUM_AGENTS >= 3)
+# ... up to 18799 (max 10 agents)
 ```
 
-**Porta padrão:** `18790` (primeiro agente)
+**Default Port:** `18790` (first agent)
 
-### 🔓 Como Acessar (Primeiro Acesso)
+### 🔓 How to Access (First Time)
 
-Após o container iniciar (pode levar ~30s para carregar os modelos):
+After the container starts (it may take ~30s to load models):
 
-1. Vá no painel do RunPod e clique em **Connect** > **Expose Port (18790)** ou copie a URL do Proxy.
-2. A URL será algo como: `https://{POD_ID}-18790.proxy.runpod.net/overview`
-3. Você verá uma tela de login.
+1. Go to the RunPod dashboard and click **Connect** > **Expose Port (18790)** or copy the Proxy URL.
+2. The URL will look like: `https://{POD_ID}-18790.proxy.runpod.net/overview`
+3. You will see a login screen.
 4. **Input:** `Password (not stored)`
-5. **Senha:** Use a mesma definida na ENV `OPENCLAW_WEB_PASSWORD`.
+5. **Password:** Use the same password defined in the `OPENCLAW_WEB_PASSWORD` ENV.
 
-> 💡 **Dica:** O OpenClaw usa essa senha apenas para autenticar a sessão local no browser.
+> 💡 **Tip:** OpenClaw uses this password only to authenticate the local session in the browser.
 
 ---
 
-## 📋 Índice
+## 📋 Table of Contents
 
-1. [Variáveis de Ambiente](#-variáveis-de-ambiente)
-   - [Configuração de Agentes](#configuração-de-agentes)
-   - [Parâmetros do Modelo](#parâmetros-do-modelo-request-api)
-   - [Thinking/Behavior](#thinkingbehavior-do-agente)
-   - [Contexto e Memória](#contexto-e-memória)
-   - [Ollama Server](#ollama-server-gpu--performance)
-2. [Consumo de VRAM](#-consumo-de-vram-glm-47-flash)
-3. [Presets por GPU](#-presets-prontos-por-gpu)
-4. [Portas e Acesso](#-portas-e-acesso)
-5. [Persistência](#-persistência-de-dados)
-6. [Segurança](#-segurança)
+1. [Environment Variables](#-environment-variables)
+   - [Agent Configuration](#agent-configuration)
+   - [Model Parameters](#model-parameters-api-request)
+   - [Thinking/Behavior](#thinkingbehavior)
+   - [Context & Memory](#context--memory)
+   - [Ollama Server](#ollama-server---gpu--performance)
+2. [VRAM Consumption](#-vram-consumption-glm-47-flash)
+3. [GPU Presets](#-gpu-ready-presets)
+4. [Ports & Access](#-ports--access)
+5. [Persistence](#-data-persistence-runpod-volume)
+6. [Security](#-security--isolation-architecture)
 7. [Troubleshooting](#-troubleshooting)
 
 # =============================================================================
-# Arquitetura: Quem Controla O Quê?
+# Architecture: Who Controls What?
 # =============================================================================
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     OLLAMA SERVER                            │
-│  ENV VARS controlam o SERVIDOR:                              │
-│  • OLLAMA_NUM_PARALLEL (requests simultâneos)                │
-│  • OLLAMA_MAX_LOADED_MODELS (modelos na memória)             │
-│  • OLLAMA_KV_CACHE_TYPE (tipo de cache)                      │
-│  • OLLAMA_FLASH_ATTENTION (otimização GPU)                   │
-│  • OLLAMA_CONTEXT_LENGTH (default se não especificado)       │
-│  • OLLAMA_NUM_GPU (layers na GPU)                            │
-│  • OLLAMA_MAX_QUEUE (fila de requests)                       │
-│  • OLLAMA_DEBUG (nível de log)                               │
+│  ENV VARS control the SERVER:                                │
+│  • OLLAMA_NUM_PARALLEL (simultaneous requests)               │
+│  • OLLAMA_MAX_LOADED_MODELS (models in memory)               │
+│  • OLLAMA_KV_CACHE_TYPE (cache type)                         │
+│  • OLLAMA_FLASH_ATTENTION (GPU optimization)                 │
+│  • OLLAMA_CONTEXT_LENGTH (default if not specified)          │
+│  • OLLAMA_NUM_GPU (layers on GPU)                            │
+│  • OLLAMA_MAX_QUEUE (request queue)                          │
+│  • OLLAMA_DEBUG (log level)                                  │
 └─────────────────────────────────────────────────────────────┘
                             ▲
-                            │ API Request com params
+                            │ API Request with params
                             │
 ┌─────────────────────────────────────────────────────────────┐
 │                      OPENCLAW                                │
-│  PARAMS são enviados na REQUEST:                             │
-│  • temperature (criatividade)                                │
+│  PARAMS are sent in the REQUEST:                             │
+│  • temperature (creativity)                                  │
 │  • top_p (nucleus sampling)                                  │
-│  • repeat_penalty (repetição)                                │
-│  • num_ctx (context window desta request)                    │
-│  • think: true/false (modo reasoning)                        │
+│  • repeat_penalty (repetition)                               │
+│  • num_ctx (context window of this request)                  │
+│  • think: true/false (reasoning mode)                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ⚙️ Variáveis de Ambiente
+## ⚙️ Environment Variables
 
-### Configuração de Agentes
+### Agent Configuration
 
-| Variável | Default | Descrição |
+| Variable | Default | Description |
 |----------|---------|-----------|
-| `OPENCLAW_WEB_PASSWORD` | **OBRIGATÓRIO** | 🔐 Senha de acesso aos dashboards |
-| `OPENCLAW_NUM_AGENTS` | `3` | Número de agentes (1-10) |
-| `OPENCLAW_AGENT_PREFIX` | `agent` | Prefixo do nome (ex: `agent_1`) |
-| `OPENCLAW_BASE_PORT` | `18790` | Porta do primeiro agente |
-| `OPENCLAW_MODEL` | `glm-4.7-flash:latest` | Modelo Ollama a usar |
-| `OPENCLAW_MODEL_AUTO_PULL` | `true` | Baixar modelo automaticamente |
-| `OPENCLAW_WARMUP_ENABLED` | `true` | Pré-carregar modelo na VRAM |
+| `OPENCLAW_WEB_PASSWORD` | **MANDATORY** | 🔐 Access password for dashboards |
+| `OPENCLAW_NUM_AGENTS` | `3` | Number of agents (1-10) |
+| `OPENCLAW_AGENT_PREFIX` | `agent` | Name prefix (e.g., `agent_1`) |
+| `OPENCLAW_BASE_PORT` | `18790` | Port of the first agent |
+| `OPENCLAW_MODEL` | `glm-4.7-flash:latest` | Ollama model to use |
+| `OPENCLAW_MODEL_AUTO_PULL` | `true` | Automatically pull model |
+| `OPENCLAW_WARMUP_ENABLED` | `true` | Preload model into VRAM |
 
 ---
 
-### Parâmetros do Modelo (Request API)
+### Model Parameters (API Request)
 
-> ⚠️ **Importante:** Esses parâmetros são enviados pelo OpenClaw em cada request para o Ollama.
+> ⚠️ **Important:** These parameters are sent by OpenClaw in each request to Ollama.
 
-| Variável | Default | Descrição |
+| Variable | Default | Description |
 |----------|---------|-----------|
-| `OPENCLAW_TEMPERATURE` | `0.7` | Criatividade (0.0 = determinístico, 2.0 = muito criativo) |
+| `OPENCLAW_TEMPERATURE` | `0.7` | Creativity (0.0 = deterministic, 2.0 = very creative) |
 | `OPENCLAW_TOP_P` | `0.95` | Nucleus sampling (0.0-1.0) |
-| `OPENCLAW_REPEAT_PENALTY` | `1.0` | ⚠️ **CRÍTICO:** Manter em `1.0` para GLM-4.7! |
-| `OPENCLAW_NUM_CTX` | `131072` | 📏 Context window (tokens). **Ajuste conforme sua GPU!** |
-| `OPENCLAW_MAX_TOKENS` | `32768` | Máximo de tokens na resposta |
+| `OPENCLAW_REPEAT_PENALTY` | `1.0` | ⚠️ **CRITICAL:** Keep at `1.0` for GLM-4.7! |
+| `OPENCLAW_NUM_CTX` | `131072` | 📏 Context window (tokens). **Adjust according to your GPU!** |
+| `OPENCLAW_MAX_TOKENS` | `32768` | Max tokens in response |
 
-> 💡 **Dica:** `OPENCLAW_NUM_CTX` é o parâmetro mais importante para ajustar conforme sua GPU. Veja a [tabela de VRAM](#-consumo-de-vram-glm-47-flash).
+> 💡 **Tip:** `OPENCLAW_NUM_CTX` is the most important parameter to adjust based on your GPU. See the [VRAM table](#-vram-consumption-glm-47-flash).
 
 ---
 
-### Thinking/Behavior do Agente
+### Thinking/Behavior
 
-| Variável | Default | Opções | Descrição |
+| Variable | Default | Options | Description |
 |----------|---------|--------|-----------|
-| `OPENCLAW_THINKING_DEFAULT` | `on` | `on` / `off` | 🧠 Ativar raciocínio (reasoning) |
-| `OPENCLAW_VERBOSE_DEFAULT` | `off` | `on` / `off` | Modo verbose |
-| `OPENCLAW_ELEVATED_DEFAULT` | `on` | `on` / `off` | Permissões elevadas |
+| `OPENCLAW_THINKING_DEFAULT` | `on` | `on` / `off` | 🧠 Enable reasoning |
+| `OPENCLAW_VERBOSE_DEFAULT` | `off` | `on` / `off` | Verbose mode |
+| `OPENCLAW_ELEVATED_DEFAULT` | `on` | `on` / `off` | Elevated permissions |
 
 ---
 
-### Contexto e Memória
+### Context & Memory
 
-| Variável | Default | Descrição |
+| Variable | Default | Description |
 |----------|---------|-----------|
-| `OPENCLAW_CONTEXT_TOKENS` | `131072` | Limite de tokens do contexto da conversa |
-| `OPENCLAW_TIMEOUT_SECONDS` | `600` | Timeout por request (10 min) |
-| `OPENCLAW_MAX_CONCURRENT` | `3` | Requests simultâneos por agente |
+| `OPENCLAW_CONTEXT_TOKENS` | `131072` | Conversation context token limit |
+| `OPENCLAW_TIMEOUT_SECONDS` | `600` | Timeout per request (10 min) |
+| `OPENCLAW_MAX_CONCURRENT` | `3` | Simultaneous requests per agent |
 
 ---
 
-### Context Pruning (Avançado)
+### Context Pruning (Advanced)
 
-> 🧹 Gerenciamento automático de memória quando o contexto fica muito grande.
+> 🧹 Automatic memory management when context gets too large.
 
-| Variável | Default | Descrição |
+| Variable | Default | Description |
 |----------|---------|-----------|
 | `OPENCLAW_PRUNING_MODE` | `adaptive` | `adaptive` / `aggressive` / `off` |
-| `OPENCLAW_KEEP_LAST_ASSISTANTS` | `3` | Quantas respostas recentes manter |
-| `OPENCLAW_SOFT_TRIM_RATIO` | `0.3` | Ratio para trim suave (30%) |
-| `OPENCLAW_HARD_CLEAR_RATIO` | `0.5` | Ratio para limpeza total (50%) |
+| `OPENCLAW_KEEP_LAST_ASSISTANTS` | `3` | How many recent responses to keep |
+| `OPENCLAW_SOFT_TRIM_RATIO` | `0.3` | Soft trim ratio (30%) |
+| `OPENCLAW_HARD_CLEAR_RATIO` | `0.5` | Hard clear ratio (50%) |
 
 ---
 
 ### Ollama Server - GPU & Performance
 
-> 🖥️ **Estas variáveis controlam o servidor Ollama**, não os parâmetros da request.
+> 🖥️ **These variables control the Ollama server**, not request parameters.
 
-| Variável | Default | Descrição |
+| Variable | Default | Description |
 |----------|---------|-----------|
-| `OLLAMA_NUM_PARALLEL` | `4` | Requests paralelos simultâneos |
-| `OLLAMA_KV_CACHE_TYPE` | `q8_0` | Tipo de cache: `q8_0` (economiza ~40% VRAM), `f16` (máx qualidade) |
-| `OLLAMA_NUM_GPU` | `999` | Layers na GPU (999 = todas) |
-| `OLLAMA_KEEP_ALIVE` | `-1` | Tempo modelo na VRAM (-1 = sempre) |
-| `OLLAMA_FLASH_ATTENTION` | `1` | Flash Attention (+30-50% velocidade) |
-| `OLLAMA_MAX_LOADED_MODELS` | `1` | Modelos simultâneos na memória |
-| `OLLAMA_CONTEXT_LENGTH` | `131072` | Context length default do servidor |
-| `OLLAMA_MAX_QUEUE` | `512` | Fila de requests antes de rejeitar |
+| `OLLAMA_NUM_PARALLEL` | `4` | Simultaneous parallel requests |
+| `OLLAMA_KV_CACHE_TYPE` | `q8_0` | Cache type: `q8_0` (saves ~40% VRAM), `f16` (max quality) |
+| `OLLAMA_NUM_GPU` | `999` | Layers on GPU (999 = all) |
+| `OLLAMA_KEEP_ALIVE` | `-1` | Time model stays in VRAM (-1 = always) |
+| `OLLAMA_FLASH_ATTENTION` | `1` | Flash Attention (+30-50% speed) |
+| `OLLAMA_MAX_LOADED_MODELS` | `1` | Simultaneous loaded models |
+| `OLLAMA_CONTEXT_LENGTH` | `131072` | Server default context length |
+| `OLLAMA_MAX_QUEUE` | `512` | Request queue before rejection |
 
 ---
 
-### Ollama Server - Rede & Logs
+### Ollama Server - Network & Logs
 
-| Variável | Default | Descrição |
+| Variable | Default | Description |
 |----------|---------|-----------|
-| `OLLAMA_HOST` | `0.0.0.0` | Interface de rede |
-| `OLLAMA_PORT` | `11434` | Porta do servidor Ollama |
+| `OLLAMA_HOST` | `0.0.0.0` | Network interface |
+| `OLLAMA_PORT` | `11434` | Ollama server port |
 | `OLLAMA_DEBUG` | `false` | `false` / `1` (debug) / `2` (trace) |
-| `LOG_LEVEL` | `info` | Nível de log geral |
+| `LOG_LEVEL` | `info` | General log level |
 
 ---
 
-## 📊 Consumo de VRAM (GLM-4.7-Flash)
+## 📊 VRAM Consumption (GLM-4.7-Flash)
 
-> 📈 **O modelo GLM-4.7-Flash** usa ~17GB base + memória extra por context length.
+> 📈 **The GLM-4.7-Flash model** uses ~17GB base + extra memory per context length.
 
-| Context Length | VRAM Total | GPU Recomendada |
+| Context Length | Total VRAM | Recommended GPU |
 |----------------|------------|-----------------|
 | **4K tokens** | ~17 GB | RTX 3090 |
 | **8K tokens** | ~18 GB | RTX 3090/4090 |
@@ -204,11 +204,11 @@ Após o container iniciar (pode levar ~30s para carregar os modelos):
 | **131K tokens** | ~30 GB | A6000/RTX 6000 Ada |
 | **200K tokens** | ~48 GB | A6000/H100/H200 |
 
-> 💡 **MLA (Multi-Latent Attention)** do GLM-4.7 economiza ~73% de VRAM no KV cache comparado a modelos tradicionais!
+> 💡 **MLA (Multi-Latent Attention)** of GLM-4.7 saves ~73% VRAM on KV cache compared to traditional models!
 
 ---
 
-## 🎯 Presets Prontos por GPU
+## 🎯 GPU Ready Presets
 
 ### RTX 3090 / RTX 4090 (24GB)
 
@@ -249,119 +249,119 @@ OLLAMA_NUM_PARALLEL=6
 
 ---
 
-## 🌐 Portas e Acesso
+## 🌐 Ports & Access
 
-| Porta | Serviço | Expor Pública? | Descrição |
+| Port | Service | Public Expose? | Description |
 |-------|---------|----------------|-----------|
-| `18790` | Agente 1 | **SIM (Obrigatório)** | Dashboard Web do Agente 1 |
-| `18791` | Agente 2 | **SIM (Obrigatório)** | Se `NUM_AGENTS >= 2` |
-| `18792` | Agente 3 | **SIM (Obrigatório)** | Se `NUM_AGENTS >= 3` |
-| `11434` | Ollama API | **NÃO (Opcional)** | Use apenas se precisar acessar a API direta (debug). O OpenClaw usa essa porta internamente via `localhost`. |
+| `18790` | Agent 1 | **YES (Mandatory)** | Agent 1 Web Dashboard |
+| `18791` | Agent 2 | **YES (Mandatory)** | If `NUM_AGENTS >= 2` |
+| `18792` | Agent 3 | **YES (Mandatory)** | If `NUM_AGENTS >= 3` |
+| `11434` | Ollama API | **NO (Optional)** | Use only if you need direct API access (debug). OpenClaw uses this port internally via `localhost`. |
 
-### Exemplo com 5 Agentes
+### Example with 5 Agents
 
 ```env
 OPENCLAW_NUM_AGENTS=5
-OPENCLAW_WEB_PASSWORD=minha_senha_segura
+OPENCLAW_WEB_PASSWORD=my_secure_password
 ```
 
-Resultado:
-- `agent_1` → porta **18790** (Expor TCP Port)
-- `agent_2` → porta **18791** (Expor TCP Port)
+Result:
+- `agent_1` → port **18790** (Expose TCP Port)
+- `agent_2` → port **18791** (Expose TCP Port)
 - ...
-- `agent_5` → porta **18794** (Expor TCP Port)
+- `agent_5` → port **18794** (Expose TCP Port)
 
 ---
 
-## 💾 Persistência de Dados (Volume RunPod)
+## 💾 Data Persistence (RunPod Volume)
 
-Para não perder suas memórias, conversas e modelos baixados ao reiniciar o pod, você **DEVE** configurar o Volume Path corretamente.
+To properly save your memories, conversations, and downloaded models when restarting the pod, you **MUST** configure the Volume Path correctly.
 
-1. No Template do RunPod, configure **Volume Mount Path**: `/workspace`
-2. Certifique-se de que seu Container Disk Size é suficiente (mínimo 50GB recomendado).
+1. In the RunPod Template, configure **Volume Mount Path**: `/workspace`
+2. Ensure your Container Disk Size is sufficient (minimum 50GB recommended).
 
-**O que é salvo em `/workspace`:**
+**What is saved in `/workspace`:**
 ```
 /workspace/
-├── .ollama/models/      # Modelos LLM baixados (evita download a cada restart)
-├── agents/              # 🧠 CÉREBRO DOS AGENTES (Memórias, sessões, configs)
+├── .ollama/models/      # Downloaded LLM models (avoids re-downloading every restart)
+├── agents/              # 🧠 AGENT BRAINS (Memories, sessions, configs)
 │   └── agent_1/
-│       ├── .openclaw/   # Configurações locais do agente
-│       └── workspace/   # Arquivos gerados pelo agente
-├── logs/                # Histórico de logs para debug
-└── .cache/              # Caches de sistema (npm, pip, cuda)
+│       ├── .openclaw/   # Local agent configurations
+│       └── workspace/   # Agent generated files
+├── logs/                # Log history for debugging
+└── .cache/              # System caches (npm, pip, cuda)
 ```
 
-> ⚠️ **Atenção:** Se você não montar o volume em `/workspace`, todos os dados serão perdidos ao desligar o Pod!
+> ⚠️ **Warning:** If you do not mount the volume at `/workspace`, all data will be lost when the Pod is turned off!
 
-### 💡 Dica Pro: RunPod Network Volumes (NFS)
-Se você usa a **Secure Cloud**, recomendamos fortemente usar um **Network Volume**.
-1. Crie um Network Volume na sua região.
-2. Monte-o em `/workspace` no seu template.
-3. **Benefício:** Você pode destruir o Pod, criar outro (até com GPU diferente), e **todas as suas memórias, agentes e histórico estarão lá intactos**. É a forma definitiva de persistência.
+### 💡 Pro Tip: RunPod Network Volumes (NFS)
+If you use **Secure Cloud**, we strongly recommend using a **Network Volume**.
+1. Create a Network Volume in your region.
+2. Mount it at `/workspace` in your template.
+3. **Benefit:** You can destroy the Pod, create another (even with a different GPU), and **all your memories, agents, and history will be there intact**. This is the ultimate form of persistence.
 
 ---
 
-## 🔒 Segurança e Arquitetura de Isolamento
+## 🔒 Security & Isolation Architecture
 
-Para garantir que um agente não interfira nas memórias ou arquivos de outro, implementamos uma arquitetura de isolamento rigorosa:
+To ensure one agent does not interfere with another's memories or files, we implemented a rigorous isolation architecture:
 
-### 1. 🧠 Memórias e Vector DB Isolados
-Cada agente possui seu próprio banco de dados vetorial (LanceDB/Chroma) localizado em seu diretório privado.
-- **Benefício:** O `Agent 1` (ex: Coder) nunca misturará conhecimento com o `Agent 2` (ex: Writer).
-- **Caminho:** `/workspace/agents/agent_{N}/.openclaw/memory`
+### 1. 🧠 Isolated Memories and Vector DB
+Each agent has its own vector database (LanceDB/Chroma) located in its private directory.
+- **Benefit:** `Agent 1` (e.g., Coder) will never mix knowledge with `Agent 2` (e.g., Writer).
+- **Path:** `/workspace/agents/agent_{N}/.openclaw/memory`
 
-### 2. 📂 Workspaces Separados
-Cada agente opera em um diretório de trabalho exclusivo (`CWD`).
-- **Benefício:** Arquivos criados, código gerado e downloads ficam segregados.
-- **Estrutura:**
+### 2. 📂 Separate Workspaces
+Each agent operates in an exclusive working directory (`CWD`).
+- **Benefit:** Created files, generated code, and downloads are segregated.
+- **Structure:**
   ```text
   /workspace/agents/
-  ├── agent_1/ (Porta 18790) 🔒 Privado
-  ├── agent_2/ (Porta 18791) 🔒 Privado
+  ├── agent_1/ (Port 18790) 🔒 Private
+  ├── agent_2/ (Port 18791) 🔒 Private
   └── ...
   ```
 
-### 3. 🔑 Tokens de Autenticação Únicos
-O sistema gera automaticamente um **Token de Serviço** único para cada agente na inicialização.
-- Isso previne que scripts maliciosos em um agente controlem outro agente via API.
-- Tokens salvos em: `/workspace/agents/agent_{N}/.openclaw/token`
+### 3. 🔑 Unique Auth Tokens
+The system automatically generates a unique **Service Token** for each agent at startup.
+- This prevents malicious scripts in one agent from controlling another agent via API.
+- Tokens saved in: `/workspace/agents/agent_{N}/.openclaw/token`
 
 ---
 
-## 🧱 Segurança
+## 🧱 Security Features
 
-- ✅ **Senha obrigatória** - Sem fallback inseguro
-- ✅ **Tokens únicos** - Cada agente tem seu token
-- ✅ **Logs mascarados** - Senhas não aparecem nos logs
-- ✅ **Trusted Proxies** - Configurados para redes internas
-- ✅ **CORS automático** - Aceita conexões do RunPod Proxy
-- ✅ **Auto-detecção RunPod** - Exibe URLs corretas de acesso
+- ✅ **Mandatory Password** - No insecure fallback
+- ✅ **Unique Tokens** - Each agent has its own token
+- ✅ **Masked Logs** - Passwords do not appear in logs
+- ✅ **Trusted Proxies** - Configured for internal networks
+- ✅ **Automatic CORS** - Accepts RunPod Proxy connections
+- ✅ **RunPod Auto-detection** - Displays correct access URLs
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Erro: "Out of memory"
+### Error: "Out of memory"
 
-Reduza o context:
+Reduce context:
 ```env
 OPENCLAW_NUM_CTX=65536
 OLLAMA_CONTEXT_LENGTH=65536
 ```
 
-### Erro: "1008 origin not allowed"
+### Error: "1008 origin not allowed"
 
-Já corrigido automaticamente! Se persistir, verifique se está usando a imagem mais recente.
+Already fixed automatically! If it persists, verify you are using the latest image.
 
-### Modelo não carrega
+### Model does not load
 
 ```env
 OPENCLAW_MODEL_AUTO_PULL=true
 OPENCLAW_WARMUP_ENABLED=true
 ```
 
-### Performance lenta
+### Slow performance
 
 ```env
 OLLAMA_FLASH_ATTENTION=1
@@ -374,10 +374,10 @@ OLLAMA_NUM_PARALLEL=2
 ## 📝 Logs
 
 ```bash
-# Logs de um agente
+# Agent 1 Logs
 tail -f /workspace/logs/agent_1.log
 
-# Logs do Ollama
+# Ollama Logs
 tail -f /workspace/logs/ollama.log
 
 # Via supervisorctl
@@ -386,14 +386,14 @@ supervisorctl tail -f openclaw-agent_1
 
 ---
 
-## 📜 Licença
+## 📜 License
 
 MIT License - OpenClaw © 2024-2026
 
 ---
 
-## 🔗 Links Úteis
+## 🔗 Useful Links
 
-- [Documentação OpenClaw](https://docs.openclaw.ai)
-- [Documentação Ollama](https://ollama.com)
+- [OpenClaw Documentation](https://docs.openclaw.ai)
+- [Ollama Documentation](https://ollama.com)
 - [RunPod Templates](https://runpod.io/console/templates)
