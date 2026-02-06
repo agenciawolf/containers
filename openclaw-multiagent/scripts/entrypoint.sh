@@ -510,12 +510,12 @@ setup_agents() {
   },
   "agents": {
     "defaults": {
-      "thinkingDefault": "on",
-      "verboseDefault": "off",
-      "elevatedDefault": "on",
-      "timeoutSeconds": 600,
-      "maxConcurrent": 3,
-      "contextTokens": 131072,
+      "thinkingDefault": "${OPENCLAW_THINKING_DEFAULT:-on}",
+      "verboseDefault": "${OPENCLAW_VERBOSE_DEFAULT:-off}",
+      "elevatedDefault": "${OPENCLAW_ELEVATED_DEFAULT:-on}",
+      "timeoutSeconds": ${OPENCLAW_TIMEOUT_SECONDS:-600},
+      "maxConcurrent": ${OPENCLAW_MAX_CONCURRENT:-3},
+      "contextTokens": ${OPENCLAW_CONTEXT_TOKENS:-131072},
       "model": {
         "primary": "ollama/${MODEL}"
       },
@@ -523,18 +523,18 @@ setup_agents() {
         "ollama/${MODEL}": {
           "alias": "${MODEL}",
           "params": {
-            "temperature": 0.7,
-            "top_p": 0.95,
-            "repeat_penalty": 1.0,
-            "num_ctx": 131072
+            "temperature": ${OPENCLAW_TEMPERATURE:-0.7},
+            "top_p": ${OPENCLAW_TOP_P:-0.95},
+            "repeat_penalty": ${OPENCLAW_REPEAT_PENALTY:-1.0},
+            "num_ctx": ${OPENCLAW_NUM_CTX:-131072}
           }
         }
       },
       "contextPruning": {
-        "mode": "adaptive",
-        "keepLastAssistants": 3,
-        "softTrimRatio": 0.3,
-        "hardClearRatio": 0.5,
+        "mode": "${OPENCLAW_PRUNING_MODE:-adaptive}",
+        "keepLastAssistants": ${OPENCLAW_KEEP_LAST_ASSISTANTS:-3},
+        "softTrimRatio": ${OPENCLAW_SOFT_TRIM_RATIO:-0.3},
+        "hardClearRatio": ${OPENCLAW_HARD_CLEAR_RATIO:-0.5},
         "minPrunableToolChars": 50000
       },
       "compaction": {
@@ -572,8 +572,8 @@ setup_agents() {
             "reasoning": true,
             "input": ["text"],
             "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-            "contextWindow": 131072,
-            "maxTokens": 32768
+            "contextWindow": ${OPENCLAW_NUM_CTX:-131072},
+            "maxTokens": ${OPENCLAW_MAX_TOKENS:-32768}
           }
         ]
       }
